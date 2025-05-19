@@ -1,3 +1,6 @@
 gradio
 PyPDF2
 openai
+Pillow
+pytesseract
+pymupdf
