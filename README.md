@@ -1,6 +1,6 @@
 # LLM-Assisted Student Application Evaluation
 
-This project explores the integration of the Large Language Model (LLM) to support the evaluation of student applications. The main goal is to use LLM to help admissions staff read and summarize application documents, such as motivation letters, CVs, transcripts, and essays. The project involves prompting, integrating to LLM, and software engineering (for frontend and backend).
+This project explores the integration of the Large Language Model (LLM) to support the evaluation of student applications. The main goal is to use LLM to help admissions staff read and summarize application documents, such as transcript and essay. The project involves prompting, integrating to LLM, and software engineering (for frontend and backend).
 
 ## Features
 
@@ -24,3 +24,4 @@ Follow the **Installation** section and run the application: python app.py
 1. gradio
 2. PyPDF2
 3. openai
+4. pytesseract
