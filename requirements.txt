@@ -4,3 +4,6 @@ openai
 Pillow
 pytesseract
 pymupdf
+easyocr
+torch
+opencv-python
