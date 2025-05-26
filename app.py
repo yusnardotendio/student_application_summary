@@ -6,6 +6,10 @@ from PIL import Image
 import pytesseract
 import io
 
+# Load your CSS file
+with open("style.css") as f:
+    css = f.read()
+
 openai.api_key = os.environ.get("GROQ_API_KEY")
 
 def extract_text_from_pdf(file_path):
@@ -15,7 +19,7 @@ def extract_text_from_pdf(file_path):
         # Extract text from page
         full_text += page.get_text()
         
-        # Extract images on page
+        # Extract images on page and OCR them
         for img_info in page.get_images(full=True):
             xref = img_info[0]
             base_image = doc.extract_image(xref)
@@ -46,35 +50,84 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 
     return response.choices[0].message.content
 
-def analyze_documents(resume_content, motivation_content, transctipt_content):
-    file_text = resume_content + motivation_content + transctipt_content
+def analyze_documents(resume_content, essay_content, transcript_content):
+    file_text = resume_content + "\n\n" + essay_content + "\n\n" + transcript_content
     prompt = f"""
-    Please analyze the following resume, transcript and motivation letter. Provide the following details:
-    1. Extract relevant academic and extracurricular experiences
-    2. Alignment with program goals or specialization tracks
-    3. Flag missing or weak areas in the applicant's background
-    4. A curriculum match score for each program section based on the applicant passed courses
-    5. Highlight supporting evidence from transcripts that match applicant with the master program
-    6. Overall recommendation summaries and confidence levels to assist the committee in final decisions
-    Resume, Motivation letter, Transcript: {file_text}.
-    """
-    return generate_response(prompt, "You are an expert Admissions Committee Member for TUM Campus.")
+You are an expert Admissions Committee Member for a competitive Master's program.
 
-# Gradio UI
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
+Applicant Documents: Resume, Essay, Transcript:
+{file_text}
+
+Using the following criteria, evaluate the applicant:
+
+---
+
+**ECTS Requirements:**
+
+- Minimum total 140 ECTS required to pass.
+- If below 140 ECTS, reject directly.
+
+**Curriculum Scoring (Total 50 points):**
+
+| Module Group               | Minimum ECTS | Weight |
+|----------------------------|--------------|--------|
+| Business Management Field   | 25 ECTS      | 20     |
+| Economics Field             | 10 ECTS      | 10     |
+| Empirical Research Methods  | 5 ECTS       | 10     |
+| Operations Research         | 5 ECTS       | 5      |
+| Computer Science Field      | 5 ECTS       | 5      |
+
+Calculate scores for each group based on ECTS achieved relative to minimum. For example, if applicant has 20 ECTS in Business Management (minimum 25), score is (20/25)*20 = 16 points.
+
+**GPA Scoring (Total 10 points):**
+
+- 1.0 - 1.5 : 10 points
+- 1.6 - 2.0 : 6 points
+- 2.1 - 2.5 : 3 points
+- 2.6 or below : 0 points
+
+Estimate GPA from transcript if available.
+
+**Essay Scoring (Total 40 points):**
+
+Evaluate Essay on:
+
+- Logic and Reasoning (20 points)
+- Structural Coherence (10 points)
+- Language Complexity (10 points)
+
+**Final evaluation:**
+
+- Calculate total score (ECTS + Curriculum + GPA + Essay).
+- Applicant must have total score >= 70 and minimum 140 ECTS to pass.
+- Provide detailed breakdown of scores.
+- Make clear pass or reject recommendation.
+- Provide suggestions for improvement if rejected.
+
+---
+
+Answer in a structured format with scores and recommendations.
+"""
+    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for TUM Campus.")
+
+# Gradio UI with CSS
+with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row():
-        gr.Markdown("## 1. Upload PDFs or Images")
+        gr.Markdown("## Upload PDFs or Images")
         with gr.Column():
-            resume_file = gr.File(label="Upload Resume (PDF or Image)")
+            resume_file = gr.File(label="Upload Resume")
             resume_content = gr.Textbox(label="Parsed Resume Content", lines=10)
         with gr.Column():
-            motivation_letter_file = gr.File(label="Upload Motivation Letter (PDF or Image)")
-            motivation_content = gr.Textbox(label="Parsed Motivation Letter Content", lines=10)
+            essay_file = gr.File(label="Upload Essay")
+            essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
         with gr.Column():
-            transcript_file = gr.File(label="Upload Transcript (PDF or Image)")
-            transctipt_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
+            transcript_file = gr.File(label="Upload Transcript")
+            transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
     with gr.Row():
-        summarize_button = gr.Button("2. Summarize")
+        with gr.Column():
+            #gr.Markdown("## Summarize")
+            summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
+
     with gr.Row():
         output = gr.Markdown()
 
@@ -88,12 +141,12 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         return ""
 
     resume_file.upload(process_file, resume_file, resume_content)
-    motivation_letter_file.upload(process_file, motivation_letter_file, motivation_content)
-    transcript_file.upload(process_file, transcript_file, transctipt_content)
+    essay_file.upload(process_file, essay_file, essay_content)
+    transcript_file.upload(process_file, transcript_file, transcript_content)
 
     summarize_button.click(
-        fn=analyze_documents, 
-        inputs=[resume_content, motivation_content, transctipt_content], 
+        fn=analyze_documents,
+        inputs=[resume_content, essay_content, transcript_content],
         outputs=[output]
     )
 
