@@ -113,7 +113,7 @@ Answer in a structured format with scores and recommendations.
 # Gradio UI with CSS
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row():
-        gr.Markdown("## Upload PDFs or Images")
+        gr.Markdown("## Upload PDFs")
       
         with gr.Column():
             motivation_file = gr.File(label="Upload Motivation Letter")
