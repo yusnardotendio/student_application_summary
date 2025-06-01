@@ -50,8 +50,8 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 
     return response.choices[0].message.content
 
-def analyze_documents(resume_content, motivation_content, transcript_content):
-    file_text = resume_content + "\n\n" + motivation_content + "\n\n" + transcript_content
+def analyze_documents( motivation_content, transcript_content):
+    file_text = motivation_content + "\n\n" + transcript_content
     prompt = f"""
 You are an expert Admissions Committee Member for a competitive Master's program.
 
@@ -114,9 +114,7 @@ Answer in a structured format with scores and recommendations.
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row():
         gr.Markdown("## Upload PDFs or Images")
-        with gr.Column():
-            resume_file = gr.File(label="Upload Resume")
-            resume_content = gr.Textbox(label="Parsed Resume Content", lines=10)
+      
         with gr.Column():
             motivation_file = gr.File(label="Upload Motivation Letter")
             motivation_content = gr.Textbox(label="Parsed Motivation Letter Content", lines=10)
@@ -140,13 +138,13 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
                 return extract_text_from_image(file)
         return ""
 
-    resume_file.upload(process_file, resume_file, resume_content)
+    
     motivation_file.upload(process_file, motivation_file, motivation_content)
     transcript_file.upload(process_file, transcript_file, transcript_content)
 
     summarize_button.click(
         fn=analyze_documents,
-        inputs=[resume_content, motivation_content, transcript_content],
+        inputs=[ motivation_content, transcript_content],
         outputs=[output]
     )
 
