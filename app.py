@@ -50,7 +50,7 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 
     return response.choices[0].message.content
 
-def analyze_documents( motivation_content, transcript_content):
+def analyze_documents(motivation_content, transcript_content):
     file_text = motivation_content + "\n\n" + transcript_content
     prompt = f"""
 You are an expert Admissions Committee Member for a competitive Master's program.
@@ -112,22 +112,22 @@ Answer in a structured format with scores and recommendations.
 
 # Gradio UI with CSS
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
-    with gr.Row():
-        gr.Markdown("## Upload PDFs")
-      
-        with gr.Column():
+    gr.Markdown("## 📄 Upload PDFs", elem_classes="section-title")
+
+    with gr.Row(equal_height=True):
+        with gr.Column(elem_classes=["upload-column"]):
             motivation_file = gr.File(label="Upload Motivation Letter")
             motivation_content = gr.Textbox(label="Parsed Motivation Letter Content", lines=10)
-        with gr.Column():
+        with gr.Column(elem_classes=["upload-column"]):
             transcript_file = gr.File(label="Upload Transcript")
             transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
+
     with gr.Row():
-        with gr.Column():
-            #gr.Markdown("## Summarize")
-            summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
+        summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
 
     with gr.Row():
         output = gr.Markdown()
+
 
     def process_file(file):
         if file is not None:
@@ -138,13 +138,12 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
                 return extract_text_from_image(file)
         return ""
 
-    
     motivation_file.upload(process_file, motivation_file, motivation_content)
     transcript_file.upload(process_file, transcript_file, transcript_content)
 
     summarize_button.click(
         fn=analyze_documents,
-        inputs=[ motivation_content, transcript_content],
+        inputs=[motivation_content, transcript_content],
         outputs=[output]
     )
 
