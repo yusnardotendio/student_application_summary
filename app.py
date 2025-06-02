@@ -12,13 +12,14 @@ with open("style.css") as f:
 
 openai.api_key = os.environ.get("GROQ_API_KEY")
 
+
 def extract_text_from_pdf(file_path):
     doc = fitz.open(file_path)
     full_text = ""
     for page in doc:
         # Extract text from page
         full_text += page.get_text()
-        
+
         # Extract images on page and OCR them
         for img_info in page.get_images(full=True):
             xref = img_info[0]
@@ -29,10 +30,12 @@ def extract_text_from_pdf(file_path):
             full_text += "\n" + ocr_text + "\n"
     return full_text
 
+
 def extract_text_from_image(file_obj):
     img = Image.open(file_obj)
     text = pytesseract.image_to_string(img)
     return text
+
 
 def generate_response(message: str, system_prompt: str, temperature: float = 0.5, max_tokens: int = 512):
     conversation = [
@@ -50,8 +53,9 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 
     return response.choices[0].message.content
 
-def analyze_documents(resume_content, motivation_content, transcript_content):
-    file_text = resume_content + "\n\n" + motivation_content + "\n\n" + transcript_content
+
+def analyze_documents(resume_content, essay_content, transcript_content):
+    file_text = resume_content + "\n\n" + essay_content + "\n\n" + transcript_content
     prompt = f"""
 You are an expert Admissions Committee Member for a competitive Master's program.
 
@@ -69,8 +73,8 @@ Using the following criteria, evaluate the applicant:
 
 **Curriculum Scoring (Total 50 points):**
 
-| Module Group               | Minimum ECTS | Weight |
-|----------------------------|--------------|--------|
+| Module Group                | Minimum ECTS | Weight |
+|-----------------------------|--------------|--------|
 | Business Management Field   | 25 ECTS      | 20     |
 | Economics Field             | 10 ECTS      | 10     |
 | Empirical Research Methods  | 5 ECTS       | 10     |
@@ -110,6 +114,7 @@ Answer in a structured format with scores and recommendations.
 """
     return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for TUM Campus.")
 
+
 # Gradio UI with CSS
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row():
@@ -118,8 +123,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
             resume_file = gr.File(label="Upload Resume")
             resume_content = gr.Textbox(label="Parsed Resume Content", lines=10)
         with gr.Column():
-            motivation_file = gr.File(label="Upload Motivation Letter")
-            motivation_content = gr.Textbox(label="Parsed Motivation Letter Content", lines=10)
+            essay_file = gr.File(label="Upload Essay")
+            essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
         with gr.Column():
             transcript_file = gr.File(label="Upload Transcript")
             transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
@@ -131,6 +136,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row():
         output = gr.Markdown()
 
+
     def process_file(file):
         if file is not None:
             file_type = file.name.split('.')[-1].lower()
@@ -140,13 +146,14 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
                 return extract_text_from_image(file)
         return ""
 
+
     resume_file.upload(process_file, resume_file, resume_content)
-    motivation_file.upload(process_file, motivation_file, motivation_content)
+    essay_file.upload(process_file, essay_file, essay_content)
     transcript_file.upload(process_file, transcript_file, transcript_content)
 
     summarize_button.click(
         fn=analyze_documents,
-        inputs=[resume_content, motivation_content, transcript_content],
+        inputs=[resume_content, essay_content, transcript_content],
         outputs=[output]
     )
 
