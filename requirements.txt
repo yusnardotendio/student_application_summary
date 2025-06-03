@@ -7,3 +7,6 @@ pymupdf
 easyocr
 torch
 opencv-python
+google-genai
+python-dotenv
+google.generativeai

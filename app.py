@@ -1,16 +1,38 @@
 import gradio as gr
 import os
 import fitz
-import openai
+from openai import OpenAI
 from PIL import Image
 import pytesseract
 import io
+from google import genai
+from config import ACTIVE_PROVIDER, API_KEYS
+from providers.openai_provider import OpenAIProvider
+from providers.google_provider import GoogleProvider
 
 # Load your CSS file
 with open("style.css") as f:
     css = f.read()
 
-openai.api_key = os.environ.get("GROQ_API_KEY")
+ACTIVE_PROVIDER = "openai"
+
+client = OpenAI(
+    api_key="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",
+)
+
+# client = genai.Client(
+#     api_key="AIzaSyCYjyzLqcZSmg2qRPI9QcKQONMxLy_0Nr4"
+# )
+
+def get_provider(name: str):
+    if name == "openai":
+        return OpenAIProvider(API_KEYS["openai"])
+    elif name == "google":
+        return GoogleProvider(API_KEYS["google"])
+    else:
+        raise ValueError(f"Unsupported provider: {name}")
+    
+provider = get_provider(ACTIVE_PROVIDER)
 
 def extract_text_from_pdf(file_path):
     doc = fitz.open(file_path)
@@ -40,15 +62,23 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
         {"role": "user", "content": message}
     ]
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
+    response = client.chat.completions.create(
+        model="gpt-4.1-nano",
         messages=conversation,
         temperature=temperature,
         max_tokens=max_tokens,
         stream=False
     )
 
-    return response.choices[0].message.content
+    result = response.choices[0].message.content
+
+    # response = client.models.generate_content(
+    #     model="gemini-2.0-flash", 
+    #     contents=[message]
+    # )
+    # result = response.text
+
+    return result
 
 def analyze_documents(motivation_content, transcript_content):
     file_text = motivation_content + "\n\n" + transcript_content
