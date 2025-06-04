@@ -53,7 +53,6 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 
     return response.choices[0].message.content
 
-
 def analyze_documents(essay_content, transcript_content):
     file_text = essay_content + "\n\n" + transcript_content
     prompt = f"""
@@ -142,7 +141,6 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
             elif file_type in ['png', 'jpg', 'jpeg']:
                 return extract_text_from_image(file)
         return ""
-
 
     essay_file.upload(process_file, essay_file, essay_content)
     transcript_file.upload(process_file, transcript_file, transcript_content)

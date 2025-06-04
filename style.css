@@ -1,18 +1,30 @@
-/* Button style */
-.summarize-button {
-    max-width: 400px;        
-    padding: 10px 0;
-    margin: 20px auto;
-    font-size: 16px;
+/* Headings */
+.section-title {
+    font-size: 1.5rem;
     font-weight: bold;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #1f2937;
-    color: white;
+    margin-bottom: 5px;
     text-align: center;
 }
 
-.summarize-button:hover {
+/* File Upload + Textboxes in column */
+.upload-column {
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    margin: 0 10px;
+}
+
+.summarize-button {
+    background-color: #5e60ce;
+    color: white;
+    border-radius: 5px;
+    border: none;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.summarize-button:active {
     background-color: #374151;
+    transform: scale(0.98);
 }
