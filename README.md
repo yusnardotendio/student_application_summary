@@ -14,6 +14,7 @@ This project explores the integration of the Large Language Model (LLM) to suppo
 1. Make sure to have python installed.
 2. Clone the repo.
 3. Install the required packages: pip install -r requirements.txt
+4. Create .env file on the main directory. You can copy-paste the .env_example and put your own API KEY
 
 ## How to Start
 
@@ -25,3 +26,5 @@ Follow the **Installation** section and run the application: python app.py
 2. PyPDF2
 3. openai
 4. pytesseract
+5. pymupdf
+6. google-genai

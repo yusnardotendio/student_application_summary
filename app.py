@@ -1,33 +1,73 @@
 import gradio as gr
 import os
 import fitz
+import pymupdf
 import openai
 from PIL import Image
 import pytesseract
 import io
+from google import genai
+from google.api_core import exceptions
+from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
+from providers.openai_provider import OpenAIProvider
+from providers.google_provider import GoogleProvider
 
 # Load your CSS file
 with open("style.css") as f:
     css = f.read()
 
-openai.api_key = os.environ.get("GROQ_API_KEY")
+def get_provider(name: str):
+    if name == "openai":
+        return OpenAIProvider(API_KEYS["openai_api_key"])
+    elif name == "gemini":
+        return GoogleProvider(API_KEYS["gemini_api_key"])
+    else:
+        raise ValueError(f"Unsupported provider: {name}")
+
+provider = get_provider(ACTIVE_PROVIDER)
 
 
 def extract_text_from_pdf(file_path):
-    doc = fitz.open(file_path)
+    image_parsing_prompt = """
+        Parse all the text and english text from the image.
+        If it is a transcript, then the output should be a json with keys like these 
+        {
+            name: name of the student,
+            gpa: gpa of the student. You need to convert the gpa into German GPA. Also remember that In the German grading system, GPA is calculated using a scale from 1.0 to 5.0, with 1.0 representing the highest grade and 5.0 representing a failing grade. You should convert it based on grade explanation if available in the transcript, otherwise you need to convert it based on your knowledge.,
+            study_program: study program of the student in english,
+            degree: degree of the student in english,
+            subject: {
+                subject_name: name of the subject in english,
+                credit: credit of the subject,
+                grade: grade of the subject. You need to convert it into German GPA.
+            }
+        }.
+        if it is not a transcript then parse all the text.
+    """
+    doc = pymupdf.open(file_path)
+    image_list = []
     full_text = ""
     for page in doc:
-        # Extract text from page
-        full_text += page.get_text()
+        image_list += page.get_images(full=True)
 
-        # Extract images on page and OCR them
-        for img_info in page.get_images(full=True):
-            xref = img_info[0]
-            base_image = doc.extract_image(xref)
-            image_bytes = base_image["image"]
-            image = Image.open(io.BytesIO(image_bytes))
-            ocr_text = pytesseract.image_to_string(image)
-            full_text += "\n" + ocr_text + "\n"
+    if len(image_list) <= 0:
+        for page in doc:
+            # Extract text from page
+            full_text += page.get_text()
+    else:
+        try:
+            client = genai.Client(api_key=API_KEYS["image_parsing_api_key"])
+
+            my_file = client.files.upload(file=file_path)
+
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[my_file, image_parsing_prompt],
+            )
+
+            full_text += response.text
+        except (exceptions.ClientError):
+            return "Unable to parse the image because the given API KEY is not active"
     return full_text
 
 
@@ -37,42 +77,32 @@ def extract_text_from_image(file_obj):
     return text
 
 
-def generate_response(message: str, system_prompt: str, temperature: float = 0.5, max_tokens: int = 512):
-    conversation = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": message}
-    ]
-
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=conversation,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        stream=False
+def generate_response(message: str, system_prompt: str, temperature: float = 0.5, max_tokens: int = 5000):
+    response = provider.generate_text(
+        model=MODEL_TO_USE,
+        prompt=message,
+        system_prompt=system_prompt
     )
 
-    return response.choices[0].message.content
+    return response
 
 def analyze_documents(essay_content, transcript_content):
     file_text = essay_content + "\n\n" + transcript_content
     prompt = f"""
-You are an expert Admissions Committee Member for a competitive Master's program.
+You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents and do not make assumption.
 
-Applicant Documents: Essay, Transcript:
+Applicant Documents: Essay, Transcript, respectively:
 {file_text}
 
-Using the following criteria, evaluate the applicant:
+Using the following criteria, evaluate the applicant's documents with following evaluation criteria:
 
----
-
-**ECTS Requirements:**
-
+1. ECTS Requirements:
 - Minimum total 140 ECTS required to pass.
 - If below 140 ECTS, reject directly.
 
-**Curriculum Scoring (Total 50 points):**
+2. Curriculum Scoring (max 50 points):
 
-| Module Group                | Minimum ECTS | Weight |
+| Module Group                | Minimum ECTS | Score  |
 |-----------------------------|--------------|--------|
 | Business Management Field   | 25 ECTS      | 20     |
 | Economics Field             | 10 ECTS      | 10     |
@@ -80,38 +110,43 @@ Using the following criteria, evaluate the applicant:
 | Operations Research         | 5 ECTS       | 5      |
 | Computer Science Field      | 5 ECTS       | 5      |
 
-Calculate scores for each group based on ECTS achieved relative to minimum. For example, if applicant has 20 ECTS in Business Management (minimum 25), score is (20/25)*20 = 16 points.
+Based on the transcript, group each subject into the appropriate module group using the subject name. 
+Only assign a subject to a module if it clearly belongs. Do not guess or force a match.
+For each module group, calculate the total ECTS achieved.
+If the total ECTS for a group meets or exceeds the minimum required ECTS, assign the corresponding score to that group.
+Otherwise, assign a score of 0 for that module group.
 
-**GPA Scoring (Total 10 points):**
+3. GPA Scoring (max 10 points):
+calculate the student's overall GPA based on all relevant grades in the transcript. 
+Then, assign a GPA score out of 10 based on the following criteria: 
+if the GPA is between 1.0 and 1.5, assign 10 points; 
+if it is between 1.6 and 2.0, assign 6 points; 
+if it falls between 2.1 and 2.5, assign 3 points; and 
+if the GPA is 2.6 or higher, assign 0 points.
 
-- 1.0 - 1.5 : 10 points
-- 1.6 - 2.0 : 6 points
-- 2.1 - 2.5 : 3 points
-- 2.6 or below : 0 points
+If you cannot find it in the transcript, do not guess and force it. Just put score 0
 
-Estimate GPA from transcript if available.
+4. Essay Scoring (max 40 points):
+Evaluate the essay based on the following three criteria. 
+First, assess logic and reasoning, awarding up to 20 points 
+based on the clarity, depth, and consistency of the arguments presented. 
+Second, evaluate the structural coherence of the essay, 
+assigning up to 10 points for how well the ideas are organized and 
+how effectively the essay transitions between sections. 
+Finally, examine the language complexity, giving up to 10 points based on the richness of vocabulary, sentence variety, and overall language sophistication used in the essay.
 
-**Essay Scoring (Total 40 points):**
-
-Evaluate Essay on:
-
-- Logic and Reasoning (20 points)
-- Structural Coherence (10 points)
-- Language Complexity (10 points)
-
-**Final evaluation:**
-
-- Calculate total score (ECTS + Curriculum + GPA + Essay).
-- Applicant must have total score >= 70 and minimum 140 ECTS to pass.
-- Provide detailed breakdown of scores.
-- Make clear pass or reject recommendation.
-- Provide suggestions for improvement if rejected.
-
----
-
-Answer in a structured format with scores and recommendations.
+The expected output should be in a structured format and seperated into some sections. 
+The first section should be the pass or rejection (Applicant must have total score more than or equal to 70 and minimum 140 ECTS to pass.), the total score, and total credits in ECTS the student gets.
+The second section should be strength and weakness of the student based on the transcript and essay. 
+For the weakness of transcript, you should specify the module groups that don't satisfy with the evaluation criteriia.
+Also remember that In the German grading system, GPA is calculated using a scale from 1.0 to 5.0, with 1.0 representing the highest grade and 5.0 representing a failing grade.
+The next section should be suggestions for improvement if only the student gets rejected other.
+The last section should be those four evaluation criteria. 
+On each evaluation criteria, you should put detail summary, and the score student gets.
+For the Curriculum Scoring, you should put detail breakdown of scores and module groups with the subjects that fall into the group
+and specify each subject with the credit in ECTS and grade in German GPA.
 """
-    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for TUM Campus.")
+    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents and do not make assumption.")
 
 
 # Gradio UI with CSS
