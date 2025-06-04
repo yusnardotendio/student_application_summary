@@ -54,8 +54,8 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
     return response.choices[0].message.content
 
 
-def analyze_documents(resume_content, essay_content, transcript_content):
-    file_text = resume_content + "\n\n" + essay_content + "\n\n" + transcript_content
+def analyze_documents(essay_content, transcript_content):
+    file_text = essay_content + "\n\n" + transcript_content
     prompt = f"""
 You are an expert Admissions Committee Member for a competitive Master's program.
 
@@ -117,21 +117,18 @@ Answer in a structured format with scores and recommendations.
 
 # Gradio UI with CSS
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
-    with gr.Row():
-        gr.Markdown("## Upload PDFs or Images")
-        with gr.Column():
-            resume_file = gr.File(label="Upload Resume")
-            resume_content = gr.Textbox(label="Parsed Resume Content", lines=10)
-        with gr.Column():
+    gr.Markdown("## 📄 Upload PDFs", elem_classes="section-title")
+
+    with gr.Row(equal_height=True):
+        with gr.Column(elem_classes=["upload-column"]):
             essay_file = gr.File(label="Upload Essay")
             essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
-        with gr.Column():
+        with gr.Column(elem_classes=["upload-column"]):
             transcript_file = gr.File(label="Upload Transcript")
             transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
+
     with gr.Row():
-        with gr.Column():
-            #gr.Markdown("## Summarize")
-            summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
+        summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
 
     with gr.Row():
         output = gr.Markdown()
@@ -147,13 +144,12 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         return ""
 
 
-    resume_file.upload(process_file, resume_file, resume_content)
     essay_file.upload(process_file, essay_file, essay_content)
     transcript_file.upload(process_file, transcript_file, transcript_content)
 
     summarize_button.click(
         fn=analyze_documents,
-        inputs=[resume_content, essay_content, transcript_content],
+        inputs=[essay_content, transcript_content],
         outputs=[output]
     )
 
