@@ -4,13 +4,14 @@ from google.genai import types
 
 class GoogleProvider(GenAIProvider):
     def __init__(self, api_key: str):
-        self.api_key = api_key
+        self.client = genai.Client(
+            api_key=api_key,
+        )
 
 
-    def generate_text(self, prompt: str, system_prompt: str, model: str, temperature, max_tokens) -> str:
-        client = genai.Client(api_key="GEMINI_API_KEY")
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+    def generate_text(self, model: str, prompt: str, system_prompt: str, temperature: float = 0.5, max_tokens: int = 5000) -> str:
+        response = self.client.models.generate_content(
+            model=model,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=temperature,

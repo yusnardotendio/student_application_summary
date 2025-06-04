@@ -7,7 +7,7 @@ class OpenAIProvider(GenAIProvider):
             api_key=api_key,
         )
 
-    def generate_text(self, model: str, prompt: str, system_prompt:str, temperature, max_tokens) -> str:
+    def generate_text(self, model: str, prompt: str, system_prompt:str, temperature: float = 0.5, max_tokens: int = 5000) -> str:
         conversation = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
