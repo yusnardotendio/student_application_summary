@@ -33,13 +33,13 @@ def extract_text_from_pdf(file_path):
         If it is a transcript, then the output should be a json with keys like these 
         {
             name: name of the student,
-            gpa: gpa of the student. You need to convert the gpa into German GPA. Also remember that In the German grading system, GPA is calculated using a scale from 1.0 to 5.0, with 1.0 representing the highest grade and 5.0 representing a failing grade. You should convert it based on grade explanation if available in the transcript, otherwise you need to convert it based on your knowledge.,
+            gpa: gpa of the student,
             study_program: study program of the student in english,
             degree: degree of the student in english,
             subject: {
                 subject_name: name of the subject in english,
                 credit: credit of the subject,
-                grade: grade of the subject. You need to convert it into German GPA.
+                grade: grade of the subject,
             }
         }.
         if it is not a transcript then parse all the text.
@@ -89,64 +89,113 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
 def analyze_documents(essay_content, transcript_content):
     file_text = essay_content + "\n\n" + transcript_content
     prompt = f"""
-You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents and do not make assumption.
+You are an expert AI admissions evaluation assistant. Your task is to analyze an applicant's transcript and essay text according to a specific set of criteria and provide a structured evaluation.
 
-Applicant Documents: Essay, Transcript, respectively:
-{file_text}
+Input Data:
+You will be provided with:
+1.  `[TRANSCRIPT_TEXT_HERE]`: The full text extracted from the applicant's academic transcript. This text contains course names, grades, and ECTS credits.
+The applicant's GPA is a string (e.g., "3.7", "B+", "85", "1.8"). This description will clearly state:
+a. The scale of the grading system (e.g., 0-100, A-F where A is best, 1-5 where 1 is best).
+b. The numerical value representing the best possible achievable grade in their system (this will be `P_max_foreign`).
+c. The numerical value representing the minimum passing grade in their system (this will be `P_min_foreign`).
+d, If letter grades are used (like in `[APPLICANT_GPA_HERE]`), provide the clear numerical mapping for the applicant's specific grade, and ensure `P_max_foreign` and `P_min_foreign` are also given as their numerical equivalents.
+    Example 1 (US-style GPA): "System is 0.0-4.0 scale, 4.0 is best (P_max_foreign=4.0), 2.0 is minimum passing (P_min_foreign=2.0). Applicant GPA is 3.5."
+    Example 2 (Letter grades, lower number is better): "System uses A+, A, B, C, D (min pass), E (fail). A+ maps to 1, A to 2, B to 3, C to 4, D to 5. Applicant has 'B'. So, applicant's numerical grade P_d_foreign = 3. Best possible grade value P_max_foreign = 1 (for A+). Min passing grade value P_min_foreign = 5 (for D)."
+    Example 3 (Already German scale): "System is German 1-5 scale, 1.0 best, 4.0 min pass. Applicant GPA is 1.7."
+2.  `[ESSAY_TEXT_HERE]`: The full text extracted from the applicant's essay.
 
-Using the following criteria, evaluate the applicant's documents with following evaluation criteria:
 
-1. ECTS Requirements:
-- Minimum total 140 ECTS required to pass.
-- If below 140 ECTS, reject directly.
+Evaluation Criteria and Scoring Rules:
+Part 1: ECTS Credits Evaluation
+1.  Extract Total ECTS: From the `[TRANSCRIPT_TEXT_HERE]`, identify and sum all ECTS credits earned by the applicant.
+2.  ECTS Requirement Check:
+       If Total ECTS >= 110, proceed to Part 2.
+       If Total ECTS < 110, the applicant is REJECTED. Do not proceed further with other scoring. Output the rejection reason.
 
-2. Curriculum Scoring (max 50 points):
+Part 2: Curriculum Scoring (Total Possible: 50 points)
+(Details of module groups, example courses, weights, and minimum ECTS as previously defined)
+   A. Business Management Field (Minimal 25 ECTs, Weight: 20 points)
+   B. Economics Field (Minimal 10 ECTs, Weight: 10 points)
+   C. Empirical Research Methods (Minimal 5 ECTs, Weight: 10 points)
+   D. Operations Research (Minimal 5 ECTs, Weight: 5 points)
+   E. Computer Science Field (Minimal 5 ECTs, Weight: 5 points)
+   Total Curriculum Score: Sum of points awarded.
 
-| Module Group                | Minimum ECTS | Score  |
-|-----------------------------|--------------|--------|
-| Business Management Field   | 25 ECTS      | 20     |
-| Economics Field             | 10 ECTS      | 10     |
-| Empirical Research Methods  | 5 ECTS       | 10     |
-| Operations Research         | 5 ECTS       | 5      |
-| Computer Science Field      | 5 ECTS       | 5      |
+Part 3: GPA Conversion and Scoring (Total Possible: 10 points)
+1.  Determine Applicant's Numerical Grade (`P_d_foreign`). It's the grade achieved by applicant.
+2.  Identify System Parameters (`P_max_foreign`, `P_min_foreign`).
+    Maximum possible grade in the original system: P_max_foreign
+    Minimum passing grade in the original system: P_min_foreign
+3.  Check for Direct German Scale. Whether the grade is already in the German scale (1.0 – 4.0).
+4.  Convert to German Grade (`N`) using Modified Bavarian Formula (if not direct German scale):
+    N = 1 + 3 * ((P_max_foreign - P_d_foreign) / (P_max_foreign - P_min_foreign))
+    Round N to one decimal point.
+5.  GPA Scoring based on `N`:
+       1.0 - 1.5: 10 points
+       1.6 - 2.0: 6 points
+       2.1 - 2.5: 3 points
+       2.6 or below (N >= 2.6): 0 points
+6. Letter Grade Systems:
+    If the input grading system uses letters (A+, A, B, C, D, E), convert them to numeric values:
+    A+ = 1
+    A = 2
+    B = 3
+    C = 4
+    D = 5
+    E = 6
 
-Based on the transcript, group each subject into the appropriate module group using the subject name. 
-Only assign a subject to a module if it clearly belongs. Do not guess or force a match.
-For each module group, calculate the total ECTS achieved.
-If the total ECTS for a group meets or exceeds the minimum required ECTS, assign the corresponding score to that group.
-Otherwise, assign a score of 0 for that module group.
+Part 4: Essay Scoring (Total Possible: 40 points)
+(Details of areas, evaluation criteria, and weights as previously defined)
+   A. Logic and Reasoning (Weight: 20 points)
+   B. Structural Coherence (Weight: 10 points)
+   C. Language Complexity (Weight: 10 points)
+   Total Essay Score: Sum of points awarded.
 
-3. GPA Scoring (max 10 points):
-calculate the student's overall GPA based on all relevant grades in the transcript. 
-Then, assign a GPA score out of 10 based on the following criteria: 
-if the GPA is between 1.0 and 1.5, assign 10 points; 
-if it is between 1.6 and 2.0, assign 6 points; 
-if it falls between 2.1 and 2.5, assign 3 points; and 
-if the GPA is 2.6 or higher, assign 0 points.
+Part 5: Final Decision
+1.  Calculate Overall Total Score: Total Curriculum Score + GPA Score + Total Essay Score.
+2.  Admission Check:
+       If Overall Total Score >= 70 AND Total ECTS >= 110, the applicant is ACCEPTED.
+       Otherwise, the applicant is REJECTED.
 
-If you cannot find it in the transcript, do not guess and force it. Just put score 0
+Output Instructions:
 
-4. Essay Scoring (max 40 points):
-Evaluate the essay based on the following three criteria. 
-First, assess logic and reasoning, awarding up to 20 points 
-based on the clarity, depth, and consistency of the arguments presented. 
-Second, evaluate the structural coherence of the essay, 
-assigning up to 10 points for how well the ideas are organized and 
-how effectively the essay transitions between sections. 
-Finally, examine the language complexity, giving up to 10 points based on the richness of vocabulary, sentence variety, and overall language sophistication used in the essay.
+1. Readable Summary Output:
+After the JSON output, provide a concise, human-readable summary of the evaluation. Use clear language and bullet points for scores.
 
-The expected output should be in a structured format and seperated into some sections. 
-The first section should be the pass or rejection (Applicant must have total score more than or equal to 70 and minimum 140 ECTS to pass.), the total score, and total credits in ECTS the student gets.
-The second section should be strength and weakness of the student based on the transcript and essay. 
-For the weakness of transcript, you should specify the module groups that don't satisfy with the evaluation criteriia.
-Also remember that In the German grading system, GPA is calculated using a scale from 1.0 to 5.0, with 1.0 representing the highest grade and 5.0 representing a failing grade.
-The next section should be suggestions for improvement if only the student gets rejected other.
-The last section should be those four evaluation criteria. 
-On each evaluation criteria, you should put detail summary, and the score student gets.
-For the Curriculum Scoring, you should put detail breakdown of scores and module groups with the subjects that fall into the group
-and specify each subject with the credit in ECTS and grade in German GPA.
+Example of Readable Summary Format:
+
+--- APPLICANT EVALUATION SUMMARY ---
+
+ECTS Credits:
+   Total ECTS Identified: [Number]
+   ECTS Requirement (>= 140): [Met/Not Met]
+   Status: [Proceed/Rejected due to ECTS]
+
+(If not rejected due to ECTS, continue with the following):
+
+Curriculum Score:
+   Total Curriculum Points: [Number] / 50
+
+GPA Score:
+   Applicant's Original GPA: [String, e.g., "3.5" or "B"]
+   Calculated German Grade (N): [Number, e.g., 1.8]
+   GPA Points: [Number] / 10
+
+Essay Score:
+   Logic and Reasoning: [Number] / 20
+   Structural Coherence: [Number] / 10
+   Language Complexity: [Number] / 10
+   Total Essay Points: [Number] / 40
+
+Overall Performance:
+   Overall Total Score: [Number] / 100 (Target: >= 70)
+
+Final Admission Decision:
+   Decision: [ACCEPTED/REJECTED]
+   Reasoning: [Brief summary justification, e.g., "Applicant meets ECTS and total score requirements." or "Applicant did not meet the minimum ECTS requirement." or "Applicant's total score is below the 70-point threshold."]
+
 """
-    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents and do not make assumption.")
+    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents")
 
 
 # Gradio UI with CSS
