@@ -7,3 +7,4 @@ pymupdf
 easyocr
 torch
 opencv-python
+
