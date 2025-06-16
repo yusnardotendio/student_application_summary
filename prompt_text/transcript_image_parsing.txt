@@ -1,0 +1,27 @@
+[ PROFILE ]
+
+[ DIRECTIVE ]
+Parse all the text and english text from the image.
+
+[ CONTEXT ]
+
+[ WORKFLOW ]
+
+[ CONSTRAINT ]
+
+[ OUTPUT STYLE ]
+If it is a transcript, then the output should be a json with keys like these 
+{
+    name: name of the student,
+    gpa: gpa of the student. You need to convert the gpa into German GPA.
+    study_program: study program of the student in english,
+    degree: degree of the student in english,
+    subject: {
+        subject_name: name of the subject in english,
+        credit: credit of the subject,
+        grade: grade of the subject. You need to convert it into German GPA.
+    }
+}.
+Otherwise, parse all the text.
+
+[ EXAMPLE ]

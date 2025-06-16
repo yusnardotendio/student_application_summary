@@ -11,6 +11,7 @@ from google.api_core import exceptions
 from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
 from providers.openai_provider import OpenAIProvider
 from providers.google_provider import GoogleProvider
+from helpers import *
 
 # Load your CSS file
 with open("style.css") as f:
@@ -26,24 +27,9 @@ def get_provider(name: str):
 
 provider = get_provider(ACTIVE_PROVIDER)
 
-
 def extract_text_from_pdf(file_path):
-    image_parsing_prompt = """
-        Parse all the text and english text from the image.
-        If it is a transcript, then the output should be a json with keys like these 
-        {
-            name: name of the student,
-            gpa: gpa of the student. You need to convert the gpa into German GPA. Also remember that In the German grading system, GPA is calculated using a scale from 1.0 to 5.0, with 1.0 representing the highest grade and 5.0 representing a failing grade. You should convert it based on grade explanation if available in the transcript, otherwise you need to convert it based on your knowledge.,
-            study_program: study program of the student in english,
-            degree: degree of the student in english,
-            subject: {
-                subject_name: name of the subject in english,
-                credit: credit of the subject,
-                grade: grade of the subject. You need to convert it into German GPA.
-            }
-        }.
-        if it is not a transcript then parse all the text.
-    """
+    image_parsing_prompt = get_prompt_text("prompt_text/transcript_image_parsing.txt")
+    print(image_parsing_prompt)
     doc = pymupdf.open(file_path)
     image_list = []
     full_text = ""
@@ -150,7 +136,7 @@ and specify each subject with the credit in ECTS and grade in German GPA.
 
 
 # Gradio UI with CSS
-with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
+with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as demo:
     gr.Markdown("## 📄 Upload PDFs", elem_classes="section-title")
 
     with gr.Row(equal_height=True):
