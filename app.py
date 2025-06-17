@@ -1,6 +1,6 @@
 import gradio as gr
 import os
-import fitz
+import fitz  # pymupdf alias
 import pymupdf
 import openai
 from PIL import Image
@@ -11,10 +11,14 @@ from google.api_core import exceptions
 from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
 from providers.openai_provider import OpenAIProvider
 from providers.google_provider import GoogleProvider
+from fpdf import FPDF
+import tempfile
+
 
 # Load your CSS file
 with open("style.css") as f:
     css = f.read()
+
 
 def get_provider(name: str):
     if name == "openai":
@@ -23,6 +27,7 @@ def get_provider(name: str):
         return GoogleProvider(API_KEYS["gemini_api_key"])
     else:
         raise ValueError(f"Unsupported provider: {name}")
+
 
 provider = get_provider(ACTIVE_PROVIDER)
 
@@ -52,19 +57,15 @@ def extract_text_from_pdf(file_path):
 
     if len(image_list) <= 0:
         for page in doc:
-            # Extract text from page
             full_text += page.get_text()
     else:
         try:
             client = genai.Client(api_key=API_KEYS["image_parsing_api_key"])
-
             my_file = client.files.upload(file=file_path)
-
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=[my_file, image_parsing_prompt],
             )
-
             full_text += response.text
         except (exceptions.ClientError):
             return "Unable to parse the image because the given API KEY is not active"
@@ -83,8 +84,19 @@ def generate_response(message: str, system_prompt: str, temperature: float = 0.5
         prompt=message,
         system_prompt=system_prompt
     )
-
     return response
+
+
+def generate_pdf(text):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in text.split('\n'):
+        pdf.multi_cell(0, 10, line)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.output(temp_file.name)
+    return temp_file.name
+
 
 def analyze_documents(essay_content, transcript_content):
     file_text = essay_content + "\n\n" + transcript_content
@@ -198,25 +210,34 @@ Final Admission Decision:
     return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents")
 
 
-# Gradio UI with CSS
+def evaluate_and_return_pdf_and_text(essay, transcript):
+    result = analyze_documents(essay, transcript)
+    pdf_path = generate_pdf(result)
+    return result, pdf_path
+
+
+# Gradio interface
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
-    gr.Markdown("## 📄 Upload PDFs", elem_classes="section-title")
+    gr.Markdown("## 📄 Upload PDFs / Images", elem_classes="section-title")
 
     with gr.Row(equal_height=True):
         with gr.Column(elem_classes=["upload-column"]):
-            essay_file = gr.File(label="Upload Essay")
+            essay_file = gr.File(label="Upload Essay (PDF or Image)")
             essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
         with gr.Column(elem_classes=["upload-column"]):
-            transcript_file = gr.File(label="Upload Transcript")
+            transcript_file = gr.File(label="Upload Transcript (PDF or Image)")
             transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
 
     with gr.Row():
-        summarize_button = gr.Button("Summarize", elem_classes=["summarize-button"])
+        summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"])
 
     with gr.Row():
         output = gr.Markdown()
 
+    # Hidden file output for PDF download
+    download_pdf = gr.File(label="Download Evaluation PDF", interactive=True, visible=False)
 
+    # Functions for file parsing based on extension
     def process_file(file):
         if file is not None:
             file_type = file.name.split('.')[-1].lower()
@@ -226,14 +247,21 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
                 return extract_text_from_image(file)
         return ""
 
-    essay_file.upload(process_file, essay_file, essay_content)
-    transcript_file.upload(process_file, transcript_file, transcript_content)
+    essay_file.upload(fn=process_file, inputs=essay_file, outputs=essay_content)
+    transcript_file.upload(fn=process_file, inputs=transcript_file, outputs=transcript_content)
+
+    def on_summarize(essay_text, transcript_text):
+        if not essay_text.strip() or not transcript_text.strip():
+            return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False)
+        summary_text, pdf_path = evaluate_and_return_pdf_and_text(essay_text, transcript_text)
+        return summary_text, gr.update(value=pdf_path, visible=True)
 
     summarize_button.click(
-        fn=analyze_documents,
+        fn=on_summarize,
         inputs=[essay_content, transcript_content],
-        outputs=[output]
-    )
+        outputs=[output, download_pdf]
+        )
+
 
 if __name__ == "__main__":
     demo.launch()

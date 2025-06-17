@@ -10,3 +10,5 @@ opencv-python
 google-genai
 python-dotenv
 google.generativeai
+reportlab
+fdf
