@@ -11,4 +11,4 @@ google-genai
 python-dotenv
 google.generativeai
 reportlab
-fdf
+fpdf

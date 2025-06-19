@@ -20,4 +20,4 @@ class OpenAIProvider(GenAIProvider):
             max_tokens=max_tokens,
             stream=False
         )
-        return response.choices[0].message["content"]
+        return response.choices[0].message.content

@@ -83,27 +83,21 @@ def generate_pdf(text):
 
 
 def analyze_documents(essay_content, transcript_content):
-    file_text = essay_content + "\n\n" + transcript_content
-    prompt = f"""
+    instruction_prompt = """
 You are an expert AI admissions evaluation assistant. Your task is to analyze an applicant's transcript and essay text according to a specific set of criteria and provide a structured evaluation.
 
 Input Data:
-You will be provided with:
-1.  `[TRANSCRIPT_TEXT_HERE]`: The full text extracted from the applicant's academic transcript. This text contains course names, grades, and ECTS credits.
-The applicant's GPA is a string (e.g., "3.7", "B+", "85", "1.8"). This description will clearly state:
-a. The scale of the grading system (e.g., 0-100, A-F where A is best, 1-5 where 1 is best).
-b. The numerical value representing the best possible achievable grade in their system (this will be `P_max_foreign`).
-c. The numerical value representing the minimum passing grade in their system (this will be `P_min_foreign`).
-d, If letter grades are used (like in `[APPLICANT_GPA_HERE]`), provide the clear numerical mapping for the applicant's specific grade, and ensure `P_max_foreign` and `P_min_foreign` are also given as their numerical equivalents.
-    Example 1 (US-style GPA): "System is 0.0-4.0 scale, 4.0 is best (P_max_foreign=4.0), 2.0 is minimum passing (P_min_foreign=2.0). Applicant GPA is 3.5."
-    Example 2 (Letter grades, lower number is better): "System uses A+, A, B, C, D (min pass), E (fail). A+ maps to 1, A to 2, B to 3, C to 4, D to 5. Applicant has 'B'. So, applicant's numerical grade P_d_foreign = 3. Best possible grade value P_max_foreign = 1 (for A+). Min passing grade value P_min_foreign = 5 (for D)."
-    Example 3 (Already German scale): "System is German 1-5 scale, 1.0 best, 4.0 min pass. Applicant GPA is 1.7."
-2.  `[ESSAY_TEXT_HERE]`: The full text extracted from the applicant's essay.
-
+You have been provided with:
+1.  The full text extracted from the applicant's academic transcript. This text contains course names, grades, and ECTS credits. The applicant's GPA information is also included, which should clearly state:
+    a. The scale of the grading system (e.g., 0-100, A-F where A is best, 1-5 where 1 is best).
+    b. The numerical value representing the best possible achievable grade in their system (`P_max_foreign`).
+    c. The numerical value representing the minimum passing grade in their system (`P_min_foreign`).
+    d. If letter grades are used, a clear numerical mapping for the applicant's specific grade.
+2.  The full text extracted from the applicant's essay.
 
 Evaluation Criteria and Scoring Rules:
 Part 1: ECTS Credits Evaluation
-1.  Extract Total ECTS: From the `[TRANSCRIPT_TEXT_HERE]`, identify and sum all ECTS credits earned by the applicant.
+1.  Extract Total ECTS: From the transcript text, identify and sum all ECTS credits earned by the applicant.
 2.  ECTS Requirement Check:
        If Total ECTS >= 110, proceed to Part 2.
        If Total ECTS < 110, the applicant is REJECTED. Do not proceed further with other scoring. Output the rejection reason.
@@ -164,7 +158,7 @@ Example of Readable Summary Format:
 
 ECTS Credits:
    Total ECTS Identified: [Number]
-   ECTS Requirement (>= 140): [Met/Not Met]
+   ECTS Requirement (>= 110): [Met/Not Met]
    Status: [Proceed/Rejected due to ECTS]
 
 (If not rejected due to ECTS, continue with the following):
@@ -189,9 +183,23 @@ Overall Performance:
 Final Admission Decision:
    Decision: [ACCEPTED/REJECTED]
    Reasoning: [Brief summary justification, e.g., "Applicant meets ECTS and total score requirements." or "Applicant did not meet the minimum ECTS requirement." or "Applicant's total score is below the 70-point threshold."]
-
 """
-    return generate_response(prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents")
+
+    final_prompt = f"""
+APPLICANT'S ESSAY:
+---
+{essay_content}
+---
+
+APPLICANT'S TRANSCRIPT:
+---
+{transcript_content}
+---
+
+Based on the essay and transcript provided above, please follow these instructions to evaluate the documents:
+{instruction_prompt}
+"""
+    return generate_response(final_prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents")
 
 
 def evaluate_and_return_pdf_and_text(essay, transcript):
@@ -219,26 +227,35 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         output = gr.Markdown()
 
     # Hidden file output for PDF download
-    download_pdf = gr.File(label="Download Evaluation PDF", interactive=True, visible=False)
+    download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
 
     # Functions for file parsing based on extension
     def process_file(file):
+        extracted_text = ""
         if file is not None:
-            file_type = file.name.split('.')[-1].lower()
-            if file_type == 'pdf':
+            file_type = os.path.splitext(file.name)[-1].lower()
+            if file_type == '.pdf':
                 return extract_text_from_pdf(file.name)
-            elif file_type in ['png', 'jpg', 'jpeg']:
-                return extract_text_from_image(file)
+            elif file_type in ['.png', '.jpg', '.jpeg']:
+                with open(file.name, "rb") as f:
+                    return extract_text_from_image(f)
         return ""
 
-    essay_file.upload(fn=process_file, inputs=essay_file, outputs=essay_content)
+    def process_essay_and_count(file):
+        extracted_text = process_file(file)
+        word_count = len(extracted_text.split())
+        new_label = f"Parsed Essay Content (Word Count: {word_count})"
+        return gr.update(value=extracted_text, label=new_label)
+
+
+    essay_file.upload(fn=process_essay_and_count, inputs=essay_file, outputs=essay_content)
     transcript_file.upload(fn=process_file, inputs=transcript_file, outputs=transcript_content)
 
     def on_summarize(essay_text, transcript_text):
         if not essay_text.strip() or not transcript_text.strip():
             return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False)
         summary_text, pdf_path = evaluate_and_return_pdf_and_text(essay_text, transcript_text)
-        return summary_text, gr.update(value=pdf_path, visible=True)
+        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True)
 
     summarize_button.click(
         fn=on_summarize,
