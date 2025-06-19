@@ -19,7 +19,7 @@ If it is a transcript, then the output should be a json with keys like these
     subject: {
         subject_name: name of the subject in english,
         credit: credit of the subject,
-        grade: grade of the subject. You need to convert it into German GPA.
+        grade: grade of the subject
     }
 }.
 Otherwise, parse all the text.
