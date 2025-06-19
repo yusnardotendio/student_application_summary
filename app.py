@@ -33,27 +33,26 @@ provider = get_provider(ACTIVE_PROVIDER)
 
 def extract_text_from_pdf(file_path):
     image_parsing_prompt = get_prompt_text("prompt_text/transcript_image_parsing.txt")
-    print(image_parsing_prompt)
     doc = pymupdf.open(file_path)
     image_list = []
     full_text = ""
     for page in doc:
         image_list += page.get_images(full=True)
 
-    # if len(image_list) <= 0:
-    #     for page in doc:
-    #         full_text += page.get_text()
-    # else:
-    #     try:
-    #         client = genai.Client(api_key=API_KEYS["image_parsing_api_key"])
-    #         my_file = client.files.upload(file=file_path)
-    #         response = client.models.generate_content(
-    #             model="gemini-2.0-flash",
-    #             contents=[my_file, image_parsing_prompt],
-    #         )
-    #         full_text += response.text
-    #     except (exceptions.ClientError):
-    #         return "Unable to parse the image because the given API KEY is not active"
+    if len(image_list) <= 0:
+        for page in doc:
+            full_text += page.get_text()
+    else:
+        try:
+            client = genai.Client(api_key=API_KEYS["image_parsing_api_key"])
+            my_file = client.files.upload(file=file_path)
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[my_file, image_parsing_prompt],
+            )
+            full_text += response.text
+        except (exceptions.ClientError):
+            return "Unable to parse the image because the given API KEY is not active"
     return full_text
 
 
