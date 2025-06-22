@@ -1,0 +1,10 @@
+First of all, you need to check if the uploaded file is an essay. 
+If it is not an essay then you do not need to do all of below tasks and print "It's not an Essay. Please upload an Essay".
+Parse the following essay and return a JSON object in this format:  
+{title: title, content: content, number_of_references: number_of_references, is_fit_with_essay_topics:is_fit_with_essay_topics, fit_with_essay_topics_score:fit_with_essay_topics_score}  
+
+- **title**: The title of the essay (as a string)  
+- **content**: The full body of the essay excluding the reference list (as a string)  
+- **number_of_references**: The number of distinct references listed at the end (as an integer)  
+- **is_fit_with_essay_topics**: A flag that shows whether the essay fits with the topics or not.
+- **fit_with_essay_topics_score**: A score in percentage that shows whether the essay fits with the topics or not.

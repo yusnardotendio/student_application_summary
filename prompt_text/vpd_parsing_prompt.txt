@@ -1,0 +1,11 @@
+First of all, you need to check if the uploaded file is VPD (Vorprüfungsdokumentation). 
+If it is not VPD then you do not need to do all of below tasks and print "It's not a VPD. Please upload a VPD".
+Analyze the provided VPD document and extract ONLY the German grade. Return the result in strict JSON format without any additional text or explanations. Follow these requirements:
+
+1. Search for the German grade in the document by looking for:
+   - Key terms: "Note", "Durchschnittsnote", "Gesamtnote", "Endnote"
+   - Numerical values in German grade format (1.0 to 4.0, with 1 decimal place)
+
+2. Output format (must be exact):
+
+{ "vpd_german_grade" : [numerical_value] }
