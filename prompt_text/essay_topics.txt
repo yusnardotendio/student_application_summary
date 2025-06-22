@@ -1,0 +1,4 @@
+Current Semester Essay Topics are:
+1. How will Large Language Models change how we develop software?
+2. Assess the environmental impact of Large Language Models beyond energy consumption.
+3. What role do simulations play in modern research?

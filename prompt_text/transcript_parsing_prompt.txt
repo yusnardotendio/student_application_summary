@@ -1,0 +1,88 @@
+**Objective:**  
+Parse an academic transcript and output ONLY courses categorized under these 5 fields with ECTS credits and exclude final project in these groups:  
+1. Business Management Field  
+2. Economics Field  
+3. Empirical Research Methods  
+4. Operations Research  
+5. Computer Science Field  
+
+**Steps:**  
+1. **Extract Data:**  
+   - Use OCR to identify name, study program, gpa, courses, credits, and credit system (if stated)  
+   - Ignore non-relevant courses (e.g., languages, general education, final project)  
+
+2. **Categorize Courses:**  
+   - **Business Management:** Example - management, business, marketing, finance, accounting, HR, strategy, entrepreneurship, organizational behavior, Finance and accounting, management accounting, financial management, controlling, production management, supply chain management, strategic management, risk management, human resource management, information management, organization and project management, management games.  
+   - **Economics:** Example - economics, microeconomics, macroeconomics, econometrics, game theory, monetary economics.
+   - **Empirical Research Methods:** Example - statistics, research methods, data analysis, experimental design, econometrics, qualitative/quantitative methods, Introduction to social research, applied econometrics, market research, Empirical Research in Management and Economics, Empirical research methods
+   - **Operations Research:** Example - operations research, optimization, linear programming, simulation, supply chain, logistics, decision analysis, Operations research and decision analysis, management science, operations research, decision oriented modelling
+   - **Computer Science:** Example - computer science, programming, algorithms, software engineering, databases, AI, machine learning, networks, data mining, software engineering, object oriented programming, data structure
+
+3. **Credit Conversion:**  
+   - Convert non-ECTS credits using:  
+     - US semester credits → Multiply by 2 (e.g., 3 US credits = 6 ECTS)  
+     - UK CATS credits → Multiply by 0.5 (e.g., 20 CATS = 10 ECTS)  
+     - China → Multiply by 1.5 (e.g., 4 CN credits = 6 ECTS)  
+     - Taiwan → Multiply by 1.5 (e.g., 2 TW credits = 3 ECTS)  
+     - India credits → Multiply by 2 (e.g., 3 IN credits = 6 ECTS)  
+     - Nepal credit hours → Multiply by 1.8 (e.g., 2.5 NP credit hours = 4.5 ECTS)  
+     - Indonesia SKS → Multiply by 1.7 and round to nearest 0.5 (e.g., 2 SKS = 3.5 ECTS)  
+     - Singapore Modular Credits (MC) → Multiply by 2.5 (e.g., 4 MC = 10 ECTS)  
+     - Japan/Korea credits → Multiply by 2 (similar to US system)  
+     - Middle East (Gulf countries) → Multiply by 2 (follows US system)  
+     - Latin America:  
+       - Mexico → Multiply by 1.8 (e.g., 5 MX credits = 9 ECTS)  
+       - Brazil → Multiply by 2.2 (e.g., 3 BR credits = 6.6 ECTS) 
+     - No conversion if already ECTS  
+   - If system unspecified:  
+     - Round final ECTS to nearest 0.5 (3.4 → 3.5; 4.1 → 4.0)
+     - Do not make any assumption, instead you can search online which university it is based on the transcript
+4. **Convert a GPA to German university grading system (1.0 to 5.0 scale, where 1.0 is the best and 4.0 is the minimum passing grade) using Modified Bavarian Formula, 1 + 3 x (Max Grade - Obtained Grade) / (Max Grade - Minimum Passing Grade)**  
+   The formula should be applied depending on the country based on the universities you found in the transcript. Here are the typical grading scales and minimum passing grades by country:
+    In the United States, the GPA scale is 0.0–4.0. The minimum GPA to pass is 2.0, and the maximum is 4.0.
+    In the United Kingdom, grades are given in percentages. The minimum passing mark is 40%, and the maximum is 100%.
+    In China, grades are also percentage-based. The minimum passing mark is 60%, and the maximum is 100%.
+    In Taiwan, the GPA scale is 0.0–4.3. The minimum GPA to pass is 2.0, and the maximum is 4.3.
+    In India, grading is typically percentage-based. The minimum passing mark is 40%, and the maximum is 100%.
+    In Nepal, a similar percentage-based system is used. The minimum passing mark is 40%, and the maximum is 100%.
+    In Indonesia, the GPA scale is 0.0–4.0. The minimum GPA to pass is 2.0, and the maximum is 4.0.
+    In Singapore, universities like NUS and NTU use a 0.0–5.0 GPA scale. The minimum GPA to pass is 2.0, and the maximum is 5.0.
+    In Australia, some universities use a GPA scale of 0.0–7.0, where 4.0 is the minimum to pass and 7.0 is the maximum. Others use percentage grades, where the passing mark is 50%, and the maximum is 100%.
+    Other countries, you should check what the GPA scale and minimum to pass are. If it is already an European university then you dont need to convert it
+
+5. **Output Requirements:**  
+   - **Strict Format:**  
+     ```
+     Name : Full Name
+     Bachelor Study Program: Bachelor Study Program
+     GPA: GPA
+     Total ECTS: Total ECTS
+     Curriculum Analysis:
+      Business Management Field (Total ECTS: ):  
+      - [Course Name in English]: [ECTS]  
+      Economics Field (Total ECTS: ):  
+      - [Course Name in English]: [ECTS]  
+      [...]  
+     ```  
+   - Include ALL matching courses per category  
+   - Show empty categories as (e.g., `Operations Research:\nNone`)  
+   - Exclude explanations, headers, totals, or non-relevant courses  
+
+**Example Output:**  
+Name : XYZ
+Bachelor Study Program: Computer Science
+GPA: 1.5
+Total ECTS: 200
+Curriculum Analysis:
+Business Management Field (Total ECTS: 25):  
+- Strategic Management: 6  
+- Marketing Principles: 7.5  
+Economics Field (Total ECTS: 25):  
+- Microeconomic Theory: 6  
+- Econometrics I: 6  
+Empirical Research Methods (Total ECTS: 25):  
+- Advanced Data Analysis: 5  
+Operations Research (Total ECTS: 25):  
+- Linear Optimization: 5  
+Computer Science Field (Total ECTS: 25):  
+- Database Systems: 6  
