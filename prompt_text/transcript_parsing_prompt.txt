@@ -1,5 +1,5 @@
 **Objective:**  
-Parse an academic transcript and output ONLY courses categorized under these 5 fields with ECTS credits and exclude final project in these groups:  
+Parse an academic transcript and output ONLY courses categorized under these 5 fields with ECTS credits:  
 1. Business Management Field  
 2. Economics Field  
 3. Empirical Research Methods  
@@ -9,7 +9,7 @@ Parse an academic transcript and output ONLY courses categorized under these 5 f
 **Steps:**  
 1. **Extract Data:**  
    - Use OCR to identify name, study program, gpa, courses, credits, and credit system (if stated)  
-   - Ignore non-relevant courses (e.g., languages, general education, final project)  
+   - Ignore unrelevant courses like final project, languages general education, 
 
 2. **Categorize Courses:**  
    - **Business Management:** Example - management, business, marketing, finance, accounting, HR, strategy, entrepreneurship, organizational behavior, Finance and accounting, management accounting, financial management, controlling, production management, supply chain management, strategic management, risk management, human resource management, information management, organization and project management, management games.  
