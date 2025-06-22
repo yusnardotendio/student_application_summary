@@ -173,4 +173,4 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
 
 
 if __name__ == "__main__":
-    student_application_evaluator.launch(max_file_size=5 * gr.FileSize.MB)
+    student_application_evaluator.launch()
