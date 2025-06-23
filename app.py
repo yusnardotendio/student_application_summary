@@ -1,18 +1,8 @@
 import gradio as gr
-import os
-import fitz  # pymupdf alias
-import pymupdf
-import openai
-from PIL import Image
-import pytesseract
-import io
-from google import genai
-from google.api_core import exceptions
-from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
-from providers.openai_provider import OpenAIProvider
-from providers.google_provider import GoogleProvider
+from datetime import datetime
+import string
+from config import ACTIVE_PROVIDER
 from fpdf import FPDF
-import tempfile
 from helpers import *
 from markdown_pdf import *
 from datetime import datetime
@@ -59,6 +49,7 @@ def extract_text_with_model(file_path, file_label):
     
     return response
 
+<<<<<<< HEAD
 def extract_applicant_name(transcript_content):
     """
     Extracts the applicant's name to create a sanitized filename.
@@ -88,10 +79,22 @@ def generate_pdf(text, output_filename="evaluation.pdf"):
     output_dir = "evaluations"
     os.makedirs(output_dir, exist_ok=True)
     full_path = os.path.join(output_dir, output_filename)
+=======
+def generate_pdf(text):
+    full_name = ""
+    try:
+        match = re.search(r"[*\-]?\s*full name:\s*(.+)", text.lower())
+        if match:
+            full_name = match.group(1).strip()
+            full_name = full_name.strip(string.punctuation + " ").capitalize()
+    except:
+        full_name = ""
+>>>>>>> main
 
     try:
         pdf = MarkdownPDF()
         pdf.render_markdown(text)
+<<<<<<< HEAD
         pdf.output(full_path)
     except Exception:
         pdf = FPDF()
@@ -104,6 +107,22 @@ def generate_pdf(text, output_filename="evaluation.pdf"):
         pdf.output(full_path)
     return full_path
 
+=======
+
+        filename = f"application_evaluation_{full_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        pdf.output(filename)
+    except:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+    
+        for line in text.split('\n'):
+            pdf.multi_cell(0, 10, line)
+
+        filename = f"application_evaluation_{full_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        pdf.output(filename)
+    return filename
+>>>>>>> main
 
 
 def analyze_documents(essay_content, transcript_content, vpd_content=""):
@@ -130,8 +149,19 @@ def analyze_documents(essay_content, transcript_content, vpd_content=""):
         system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents"
     )
 
+<<<<<<< HEAD
+=======
+
+def evaluate_and_return_pdf_and_text(essay, transcript, vpd=""):
+    result = analyze_documents(essay, transcript, vpd)
+    pdf_path = generate_pdf(result)
+    return result, pdf_path
+
+
+>>>>>>> main
 # Gradio interface
 with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as student_application_evaluator:
+
     gr.Markdown("## Upload PDFs / Images", elem_classes="section-title")
 
     with gr.Row(equal_height=True):
@@ -160,8 +190,21 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
     with gr.Row():
         output = gr.Markdown()
 
+<<<<<<< HEAD
     # Hidden file output for PDF download
     download_pdf = gr.File(label="Download Evaluation", interactive=False, visible=False)
+=======
+    with gr.Row():
+        download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
+
+    with gr.Row():
+        caution_markdown = gr.Markdown("""
+            **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
+            **Human judgment is still essential** in all final admission decisions.
+        """, visible=False)
+
+    
+>>>>>>> main
 
     # Functions for file parsing based on extension
     def process_file(file, file_label):
@@ -207,6 +250,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
     def on_summarize(essay_text, transcript_text, vpd_text=""):
         if not essay_text.strip() or not transcript_text.strip():
             return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False)
+<<<<<<< HEAD
         gr.update(visible=False)
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
         applicant_name = extract_applicant_name(transcript_text)
@@ -215,13 +259,18 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         pdf_path = generate_pdf(summary_text, filename)
         download_label = f"Download"
         return summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label)
+=======
+        summary_text, pdf_path = evaluate_and_return_pdf_and_text(essay_text, transcript_text, vpd_text)
+        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True), gr.update(visible=True)
+>>>>>>> main
 
     
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
-        outputs=[output, download_pdf]
-        )
+        outputs=[output, download_pdf, caution_markdown],
+        show_progress=True
+    )
 
 
 if __name__ == "__main__":

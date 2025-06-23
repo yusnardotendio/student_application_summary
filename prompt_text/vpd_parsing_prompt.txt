@@ -1,4 +1,6 @@
-Analyze the provided VPD (Vorprüfungsdokumentation) document and extract ONLY the German grade. Return the result in strict JSON format without any additional text or explanations. Follow these requirements:
+First of all, you need to check if the uploaded file is VPD (Vorprüfungsdokumentation). 
+If it is not VPD then you do not need to do all of below tasks and print "It's not a VPD. Please upload a VPD".
+Analyze the provided VPD document and extract ONLY the German grade. Return the result in strict JSON format without any additional text or explanations. Follow these requirements:
 
 1. Search for the German grade in the document by looking for:
    - Key terms: "Note", "Durchschnittsnote", "Gesamtnote", "Endnote"
