@@ -96,34 +96,6 @@ def evaluate_and_return_pdf_and_text(essay, transcript, vpd=""):
 # Gradio interface
 with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as student_application_evaluator:
 
-    with gr.Row():
-        gr.Markdown(
-            """
-            # TUM LLM-Powered Application Evaluation
-
-            ### How to Use
-            <details>
-            <summary><em>Expand</em></summary>
-
-            1. **Upload Required Documents**  
-            Upload the applicant's **essay** , **transcript** , and other **required documents** .  
-            _(Optional: The admission committee can also upload the VPD document.)_
-
-            2. **Parse Documents**  
-            The system will automatically extract relevant data from the uploaded files.
-
-            3. **Click "Summarize & Evaluate"**  
-            Once parsing is complete, click the **Summarize & Evaluate** button.  
-            _Note: Evaluation may take some time as the model processes the information._
-
-            4. **View Results**  
-            A **comprehensive evaluation** will be displayed after processing.  
-            A **downloadable PDF report** will also be available at the bottom — click the file size to download.
-            </details>
-            ---
-            """
-        )
-
     gr.Markdown("## Upload PDFs / Images", elem_classes="section-title")
 
     with gr.Row(equal_height=True):
@@ -157,7 +129,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
 
     with gr.Row():
         caution_markdown = gr.Markdown("""
-            ⚠️ **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
+            **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
             **Human judgment is still essential** in all final admission decisions.
         """, visible=False)
 
