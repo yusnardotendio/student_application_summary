@@ -5,4 +5,4 @@ easyocr.py
 data/
 .DS_Store
 .env
-evaluation/
+evaluations/
