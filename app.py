@@ -24,6 +24,20 @@ with open("style.css") as f:
 
 provider = get_provider(ACTIVE_PROVIDER)
 
+def extract_raw_text_from_file(file_path):
+    """
+    Extracts text from an essay.
+    """
+    raw_text = ""
+    try:
+        with fitz.open(file_path) as doc:
+            for page in doc:
+                raw_text += page.get_text()
+        
+    except Exception as e:
+        print(f"Error during raw text extraction: {e}")
+    return raw_text
+
 def extract_text_with_model(file_path, file_label):
     full_text = ""
 
@@ -157,13 +171,21 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         return ""
 
     def process_essay_and_count(file, file_label):
-        extracted_text = process_file(file, file_label)
-        try:
-            word_count = len(extracted_text["content"].replace("\n", " ").split())
-        except:
-            word_count = len(extracted_text.split())
+        if file is None:
+            return gr.update(value="", label="Parsed Essay Content")
+        raw_text = extract_raw_text_from_file(file.name)
+        word_count = len(raw_text.split())
         new_label = f"Parsed Essay Content (Word Count: {word_count})"
-        return gr.update(value=extracted_text, label=new_label)
+        parsed_text = extract_text_with_model(file.name, "essay")
+        return gr.update(value=parsed_text, label=new_label)
+    
+        # extracted_text = process_file(file, file_label)
+        # try:
+        #     word_count = len(extracted_text["content"].replace("\n", " ").split())
+        # except:
+        #     word_count = len(extracted_text.split())
+        # new_label = f"Parsed Essay Content (Word Count: {word_count})"
+        # return gr.update(value=extracted_text, label=new_label)
 
 
     essay_file.upload(
