@@ -5,8 +5,6 @@ from config import ACTIVE_PROVIDER
 from fpdf import FPDF
 from helpers import *
 from markdown_pdf import *
-from datetime import datetime
-import re
 
 # Load your CSS file
 with open("style.css") as f:
@@ -69,7 +67,6 @@ def extract_applicant_name(transcript_content):
     except Exception as e:
         print(f"Could not extract applicant name: {e}")
         return "Unknown_Applicant"
-    
 
 def generate_pdf(text, output_filename="evaluation.pdf"):
     """
@@ -95,7 +92,6 @@ def generate_pdf(text, output_filename="evaluation.pdf"):
     return full_path
 
 
-
 def analyze_documents(essay_content, transcript_content, vpd_content=""):
     instruction_prompt = get_prompt_text("prompt_text/summary_evaluation_prompt.txt")
 
@@ -119,6 +115,7 @@ def analyze_documents(essay_content, transcript_content, vpd_content=""):
         final_prompt, 
         system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents"
     )
+
 
 # Gradio interface
 with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as student_application_evaluator:
@@ -151,8 +148,16 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
     with gr.Row():
         output = gr.Markdown()
 
-    # Hidden file output for PDF download
-    download_pdf = gr.File(label="Download Evaluation", interactive=False, visible=False)
+    with gr.Row():
+        download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
+
+    with gr.Row():
+        caution_markdown = gr.Markdown("""
+            **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
+            **Human judgment is still essential** in all final admission decisions.
+        """, visible=False)
+
+    
 
     # Functions for file parsing based on extension
     def process_file(file, file_label):
@@ -161,6 +166,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
             return extract_text_with_model(file.name, file_label) 
         return ""
 
+   
     def process_essay_and_count(file, file_label):
         if file is None:
             return gr.update(value="", label="Parsed Essay Content")
@@ -170,14 +176,6 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         parsed_text = extract_text_with_model(file.name, "essay")
         return gr.update(value=parsed_text, label=new_label)
     
-        # extracted_text = process_file(file, file_label)
-        # try:
-        #     word_count = len(extracted_text["content"].replace("\n", " ").split())
-        # except:
-        #     word_count = len(extracted_text.split())
-        # new_label = f"Parsed Essay Content (Word Count: {word_count})"
-        # return gr.update(value=extracted_text, label=new_label)
-
 
     essay_file.upload(
         fn=process_essay_and_count, 
@@ -204,14 +202,14 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
-        download_label = f"Download"
-        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label)
+        
+        download_label = f"Download Evaluation"
+        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
 
-    
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
-        outputs=[output, download_pdf],
+        outputs=[output, download_pdf, caution_markdown],
         show_progress=True
     )
 
