@@ -15,6 +15,8 @@ from fpdf import FPDF
 import tempfile
 from helpers import *
 from markdown_pdf import *
+from datetime import datetime
+import re
 
 # Load your CSS file
 with open("style.css") as f:
@@ -43,21 +45,51 @@ def extract_text_with_model(file_path, file_label):
     
     return response
 
-def generate_pdf(text):
+def extract_applicant_name(transcript_content):
+    """
+    Extracts the applicant's name to create a sanitized filename.
+    """
+    prompt = get_prompt_text("prompt_text/extract_applicant_name.txt")
+    try:
+        # Use the existing generate_response helper
+        name_response = generate_response(
+            message=transcript_content,
+            system_prompt=prompt
+        )
+        # Clean the response to get just the name
+        name = name_response.strip().split('\n')[0]
+        # Sanitize for use in a filename
+        sanitized_name = re.sub(r'[^\w\s-]', '', name).strip()
+        sanitized_name = re.sub(r'[-\s]+', '_', sanitized_name)
+        return sanitized_name if sanitized_name else "Unknown_Applicant"
+    except Exception as e:
+        print(f"Could not extract applicant name: {e}")
+        return "Unknown_Applicant"
+    
+
+def generate_pdf(text, output_filename="evaluation.pdf"):
+    """
+    Generates a PDF from markdown text and saves it to a specific path.
+    """
+    output_dir = "evaluations"
+    os.makedirs(output_dir, exist_ok=True)
+    full_path = os.path.join(output_dir, output_filename)
+
     try:
         pdf = MarkdownPDF()
         pdf.render_markdown(text)
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        pdf.output(temp_file.name)
-    except:
+        pdf.output(full_path)
+    except Exception:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        for line in text.split('\n'):
+        # FPDF requires latin-1, so we encode and replace unknown characters
+        encoded_text = text.encode('latin-1', 'replace').decode('latin-1')
+        for line in encoded_text.split('\n'):
             pdf.multi_cell(0, 10, line)
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        pdf.output(temp_file.name)
-    return temp_file.name
+        pdf.output(full_path)
+    return full_path
+
 
 
 def analyze_documents(essay_content, transcript_content, vpd_content=""):
@@ -83,15 +115,6 @@ def analyze_documents(essay_content, transcript_content, vpd_content=""):
         final_prompt, 
         system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents"
     )
-
-
-def evaluate_and_return_pdf_and_text(essay, transcript, vpd=""):
-    result = analyze_documents(essay, transcript, vpd)
-    with open("output.txt", "w", encoding="utf-8") as file:
-        file.write(result)
-    pdf_path = generate_pdf(result)
-    return result, pdf_path
-
 
 # Gradio interface
 with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as student_application_evaluator:
@@ -124,7 +147,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         output = gr.Markdown()
 
     # Hidden file output for PDF download
-    download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
+    download_pdf = gr.File(label="Download Evaluation", interactive=False, visible=False)
 
     # Functions for file parsing based on extension
     def process_file(file, file_label):
@@ -162,9 +185,16 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
     def on_summarize(essay_text, transcript_text, vpd_text=""):
         if not essay_text.strip() or not transcript_text.strip():
             return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False)
-        summary_text, pdf_path = evaluate_and_return_pdf_and_text(essay_text, transcript_text, vpd_text)
-        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True)
+        gr.update(visible=False)
+        summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
+        applicant_name = extract_applicant_name(transcript_text)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+        filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
+        pdf_path = generate_pdf(summary_text, filename)
+        download_label = f"Download"
+        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label)
 
+    
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
@@ -173,4 +203,4 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
 
 
 if __name__ == "__main__":
-    student_application_evaluator.launch(max_file_size=5 * gr.FileSize.MB)
+    student_application_evaluator.launch()

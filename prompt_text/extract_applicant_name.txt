@@ -1,0 +1,2 @@
+From the following academic transcript text, please extract only the full name of the student. 
+Respond with nothing but the name itself. For example, if the name is Anisha Basnet, your entire response should be 'Anisha Basnet'.
