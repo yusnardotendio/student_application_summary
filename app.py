@@ -208,7 +208,9 @@ APPLICANT'S TRANSCRIPT:
 Based on the essay and transcript provided above, please follow these instructions to evaluate the documents:
 {instruction_prompt}
 """
-    return generate_response(final_prompt, system_prompt="You are an expert Admissions Committee Member for a competitive Master's program that gives score exactly based on provided documents")
+    return generate_response(final_prompt, system_prompt="You are an expert Admissions Committee Member for a "
+                                                         "competitive Master's program that gives score exactly based"
+                                                         " on provided documents")
 
 
 def evaluate_and_return_pdf_and_text(essay, transcript):
