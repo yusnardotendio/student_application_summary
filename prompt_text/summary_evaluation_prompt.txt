@@ -45,7 +45,8 @@ with this point classification.
 In case, transcript_converted_german_grade or vpd_german_grade is not provided, you should give 0 point and put a reason
 that GPA is not provided and do not put those variable names on the output.
 D. Essay Scoring (Max 40 points)
-- The essay needs to be in English and has minimum 1000 words. Otherwise, give all evaluation criteria below 0 point.
+- The essay needs to be in English. Otherwise, give all evaluation criteria below 0 point.
+•⁠  ⁠The evaluation should consider the is_meet_min_word_count for the word count rule.
 - The evaluation should consider the fit_with_essay_topics_score, if the score below 50% then give 0 point to all evaluation criteria
 - Additionally, reduce some score if the essay has less then 6
 - Evaluate the essay on three criteria:

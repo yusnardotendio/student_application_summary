@@ -8,3 +8,4 @@ Parse the following essay and return a JSON object in this format:
 - **number_of_references**: The number of distinct references listed at the end (as an integer)  
 - **is_fit_with_essay_topics**: A flag that shows whether the essay fits with the topics or not.
 - **fit_with_essay_topics_score**: A score in percentage that shows whether the essay fits with the topics or not.
+- **is_meet_min_word_count*: A flag that shows whether the essay has more than around 1000 words
