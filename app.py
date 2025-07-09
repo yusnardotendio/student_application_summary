@@ -1,10 +1,11 @@
+import os
 import gradio as gr
 from datetime import datetime
-import string
 from config import ACTIVE_PROVIDER
 from fpdf import FPDF
 from helpers import *
 from markdown_pdf import *
+import fitz
 
 # Load your CSS file
 with open("style.css") as f:

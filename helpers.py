@@ -1,13 +1,3 @@
-import gradio as gr
-import os
-import fitz
-import pymupdf
-import openai
-from PIL import Image
-import pytesseract
-import io
-from google import genai
-from google.api_core import exceptions
 from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
 from providers.openai_provider import OpenAIProvider
 from providers.google_provider import GoogleProvider
