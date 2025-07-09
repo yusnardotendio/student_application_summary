@@ -4,5 +4,4 @@ openai
 fpdf
 matplotlib
 dotenv
-python-dotenv
 PyMuPDF

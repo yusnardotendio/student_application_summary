@@ -196,8 +196,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
 
     def on_summarize(essay_text, transcript_text, vpd_text=""):
         if not essay_text.strip() or not transcript_text.strip():
-            return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False)
-        gr.update(visible=False)
+            return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False), gr.update(visible=False)
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
         applicant_name = extract_applicant_name(transcript_text)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
