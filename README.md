@@ -23,8 +23,10 @@ Follow the **Installation** section and run the application: python app.py
 ## Dependencies
 
 1. gradio
-2. PyPDF2
+2. PyMuPDF
 3. openai
-4. pytesseract
-5. pymupdf
+4. matplotlib
+5. fpdf
 6. google-genai
+7. dotenv
+8. python-dotenv
