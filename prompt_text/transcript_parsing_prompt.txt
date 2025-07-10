@@ -1,7 +1,7 @@
 **Objective:**  
 First of all, you need to check if the uploaded file is an academic transcript. 
 If it is not an academic transcript then you do not need to do all of below tasks and print "It's not an academic transcript. Please upload an academic transcript".
-Parse an academic transcript and output ONLY courses categorized under these 5 fields with ECTS credits:  
+Parse an academic transcript and output ONLY courses in english name categorized under these 5 fields with ECTS credits:  
 1. Business Management Field  
 2. Economics Field  
 3. Empirical Research Methods  
