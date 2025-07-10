@@ -207,21 +207,22 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
     )
 
     def on_summarize(essay_text, transcript_text, vpd_text=""):
-        yield gr.update(visible=True), "", gr.update(visible=False), gr.update(visible=False)
         if not essay_text.strip() or not transcript_text.strip():
             yield 0, "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False), gr.update(visible=False)
             return
+        yield gr.update(visible=True), "", gr.update(visible=False), gr.update(visible=False)
         yield (0) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
-        summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
         yield (1) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
+        summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
+        yield (2) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
         applicant_name = extract_applicant_name(transcript_text)
-        yield (2 + 1) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
+        yield (3) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
         
         download_label = f"Download Evaluation"
-        yield (3 + 1) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
+        yield (4) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
 
 
 
