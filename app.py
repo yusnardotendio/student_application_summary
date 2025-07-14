@@ -222,8 +222,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         pdf_path = generate_pdf(summary_text, filename)
         
         download_label = f"Download Evaluation"
-        yield (4) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
-
+        #yield (4) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
+        yield gr.update(visible=False), summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
 
 
     summarize_button.click(
