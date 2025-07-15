@@ -1,5 +1,6 @@
 import os
 import gradio as gr
+import time
 from datetime import datetime
 from config import ACTIVE_PROVIDER
 from fpdf import FPDF
@@ -144,7 +145,13 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
             vpd_content = gr.Textbox(label="Parsed VPD Content", lines=10)
 
     with gr.Row():
-        summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"])
+        summarize_button = gr.Button("Summarize & Evaluate", elem_id="summarize-button")
+
+    with gr.Row():
+        progress_bar = gr.Slider(minimum=0, maximum=100, value=0, label="Progress", visible=False, interactive=False)
+
+    with gr.Row():
+        output_summary = gr.Textbox(label="Evaluation Summary", lines=10)
 
     with gr.Row():
         output = gr.Markdown()
@@ -158,16 +165,16 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
             **Human judgment is still essential** in all final admission decisions.
         """, visible=False)
 
-    
+
 
     # Functions for file parsing based on extension
     def process_file(file, file_label):
         extracted_text = ""
         if file is not None:
-            return extract_text_with_model(file.name, file_label) 
+            return extract_text_with_model(file.name, file_label)
         return ""
 
-   
+
     def process_essay_and_count(file, file_label):
         if file is None:
             return gr.update(value="", label="Parsed Essay Content")
@@ -176,41 +183,89 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         new_label = f"Parsed Essay Content (Word Count: {word_count})"
         parsed_text = extract_text_with_model(file.name, "essay")
         return gr.update(value=parsed_text, label=new_label)
-    
+
 
     essay_file.upload(
-        fn=process_essay_and_count, 
-        inputs= [essay_file, gr.State("essay")], 
+        fn=process_essay_and_count,
+        inputs= [essay_file, gr.State("essay")],
         outputs=essay_content
     )
     transcript_file.upload(
-        fn=process_file, 
-        inputs= [transcript_file, gr.State("transcript")], 
+        fn=process_file,
+        inputs= [transcript_file, gr.State("transcript")],
         outputs=transcript_content
     )
     vpd_file.upload(
-        fn=process_file, 
-        inputs= [vpd_file, gr.State("vpd")], 
+        fn=process_file,
+        inputs= [vpd_file, gr.State("vpd")],
         outputs=vpd_content
     )
 
     def on_summarize(essay_text, transcript_text, vpd_text=""):
+        # Step 1: Start - hide button, show progress bar
+        yield (
+            "",  # output_summary
+            gr.update(visible=True, value=0),  # progress_bar
+            gr.update(visible=False),  # hide summarize_button
+            gr.update(value=0)  # slider reset
+        )
+
+        # Step 2: Input validation
         if not essay_text.strip() or not transcript_text.strip():
-            return "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False), gr.update(visible=False)
+            yield (
+                "Please upload and parse both Essay and Transcript before summarizing.",
+                gr.update(visible=False),
+                gr.update(visible=True),
+                gr.update(value=0)
+            )
+            return
+
+        yield (
+            "", gr.update(value=20), gr.update(visible=False), gr.update(value=20)
+        )
+
+        # Step 3: LLM document analysis
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
+        yield (
+            "", gr.update(value=60), gr.update(visible=False), gr.update(value=60)
+        )
+
+        # Step 4: Extract name
         applicant_name = extract_applicant_name(transcript_text)
+        yield (
+            "", gr.update(value=75), gr.update(visible=False), gr.update(value=75)
+        )
+
+        # Step 5: Generate PDF
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
-        
-        download_label = f"Download Evaluation"
-        return summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
+        yield (
+            "", gr.update(value=90), gr.update(visible=False), gr.update(value=90)
+        )
+
+        # Step 6: Done
+        yield (
+            summary_text,
+            gr.update(visible=False),  # hide progress bar
+            gr.update(visible=True),  # show button again
+            gr.update(value=0)  # reset slider
+        )
+
 
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
-        outputs=[output, download_pdf, caution_markdown],
-        show_progress=True
+        outputs=[
+            output_summary,
+            progress_bar,
+            summarize_button,
+            progress_bar  # slider update
+        ],
+        concurrency_limit=1,
+        queue=True,
+        show_progress=False
+
     )
 
 
