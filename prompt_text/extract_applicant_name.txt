@@ -1,4 +1,4 @@
-rom the following academic transcript text, please extract only the full name of the student. 
+From the following academic transcript text, please extract only the full name of the student. 
 - Respond with nothing but the name itself (e.g., "Jane Doe"). 
 - Do not add any extra words or sentences.
 - If you cannot find a clear student name in the text, respond with the exact phrase: NO_NAME_FOUND
