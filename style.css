@@ -50,7 +50,8 @@
 #essay-file-upload > label,
 #transcript-file-upload > label,
 #vpd-file-upload > label {
-    background-color: #366fa4 !important;          
+    background-color: #366fa4 !important;  
+    color: white;        
     font-weight: bold;
     padding: 8px 12px !important;
     border: 1px solid #9cc0e6;
