@@ -59,7 +59,9 @@ class BlueTheme(Base):
 
         super().set(
             background_fill_primary="*neutral_50",
-            block_label_background_fill="*primary_100",
+            block_label_background_fill="*primary_700",
+            block_border_width="1px",
+            block_border_color="*primary_200",
             block_label_text_color="*primary_500",
             button_primary_background_fill="*custom_blue",
             button_primary_background_fill_hover="*primary_400",

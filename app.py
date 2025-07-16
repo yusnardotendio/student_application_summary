@@ -15,7 +15,8 @@ with open("style.css") as f:
 provider = get_provider(ACTIVE_PROVIDER)
 
 essay_sample = [["sample_document/sample_essay.pdf"]]
-transcript_sample = [["sample_document/sample_transcript.pdf"], ["sample_document/sample_transcript1.pdf"]]
+transcript_sample = [["sample_document/sample_transcript.pdf"]]
+vpd_sample = [["sample_document/sample_vpd.pdf"]]
 
 def extract_raw_text_from_file(file_path):
     """
@@ -138,11 +139,12 @@ with gr.Blocks(
         gr.Markdown("## Upload PDFs / Images", elem_classes="section-title")
         with gr.Row(equal_height=True):
             with gr.Column(elem_classes=["upload-column"]):
-                essay_file = gr.File(
+                essay_file = gr.File (
                     label="Upload Essay (PDF or Image)", 
-                    file_types=['image', '.pdf']
+                    file_types=['image', '.pdf'],
+                    elem_id="essay-file-upload"
                 )
-
+                    
                 essay_example = gr.File(visible=False)
                 gr.Examples(
                     examples=essay_sample,
@@ -151,7 +153,8 @@ with gr.Blocks(
             with gr.Column(elem_classes=["upload-column"]):
                 transcript_file = gr.File(
                     label="Upload Transcript (PDF or Image)", 
-                    file_types=['image', '.pdf']
+                    file_types=['image', '.pdf'],
+                    elem_id= "transcript-file-upload"
                 )
 
                 transcript_example = gr.File(visible=False)
@@ -162,9 +165,17 @@ with gr.Blocks(
             with gr.Column(elem_classes=["upload-column"]):
                 vpd_file = gr.File(
                     label="Upload VPD (PDF or Image), Optional", 
-                    file_types=['image', '.pdf']
+                    file_types=['image', '.pdf'],
+                    elem_id= "vpd-file-upload",
                 )
-                gr.File(visible=False)
+                
+                vpd_example = gr.File(visible=False)
+                gr.Examples(
+                    examples=vpd_sample,
+                    inputs=[vpd_example],
+                )       
+                
+            gr.File(visible=False)
 
         with gr.Row(equal_height=True):
             with gr.Column(elem_classes=["upload-column"]):
