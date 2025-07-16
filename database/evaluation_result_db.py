@@ -32,7 +32,7 @@ class EvaluationResultDB:
         with self._connect() as conn:
             cur = conn.execute(
                 'SELECT id, created_at, name, decision, markdown FROM evaluation_results WHERE id = ?',
-                (result_id)
+                (result_id,)
             )
             return cur.fetchone()
 
