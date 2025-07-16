@@ -1,6 +1,10 @@
 from config import ACTIVE_PROVIDER, API_KEYS, MODEL_TO_USE
 from providers.openai_provider import OpenAIProvider
 from providers.google_provider import GoogleProvider
+from database.evaluation_result_db import EvaluationResultDB 
+import gradio as gr
+
+db = EvaluationResultDB()
 
 def get_provider(name: str):
     if name == "openai":
@@ -51,4 +55,40 @@ def generate_response(
         max_tokens=max_tokens,
         contents=contents
     )
-    return response       
+    return response     
+
+def get_decision(evaluation_summary):
+    instruction_prompt = get_prompt_text("prompt_text/get_decision_from_evaluation_summary.txt")  
+    final_prompt = f"""
+    {instruction_prompt}
+    {evaluation_summary}
+    """
+
+    return generate_response(
+        final_prompt, 
+        system_prompt="You judge an evaluation summary by providing answer of ACCEPTED or REJECTED"
+    )
+
+def save_evaluation(data, markdown):
+    db.add_result(data['applicant_name'], markdown, data['created_at'], data['decision'])
+    return f"Evaluation saved successfully!"
+
+def show_markdown(selected_row):
+    try:
+        if selected_row is None or selected_row.empty:
+            return "No row selected."
+
+        row_id = int(selected_row.iloc[0]["id"])
+        print(f"Row ID: {row_id}")
+    except Exception as e:
+        print("Error extracting ID:", e)
+        return "Failed to extract row ID."
+
+    result = db.get_result(row_id)
+    return result[4] if result else "Result not found."
+
+def get_df():
+    return db.get_dataframe()
+
+def get_result(result_id):
+    return db.get_result(result_id)
