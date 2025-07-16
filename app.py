@@ -6,12 +6,16 @@ from fpdf import FPDF
 from helpers import *
 from markdown_pdf import *
 import fitz
+from blue_theme import BlueTheme
 
 # Load your CSS file
 with open("style.css") as f:
     css = f.read()
 
 provider = get_provider(ACTIVE_PROVIDER)
+
+essay_sample = [["sample_document/sample_essay.pdf"]]
+transcript_sample = [["sample_document/sample_transcript.pdf"], ["sample_document/sample_transcript1.pdf"]]
 
 def extract_raw_text_from_file(file_path):
     """
@@ -86,7 +90,10 @@ def generate_pdf(text, output_filename="evaluation.pdf"):
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         # FPDF requires latin-1, so we encode and replace unknown characters
-        encoded_text = text.encode('latin-1', 'replace').decode('latin-1')
+        if text is not None:
+            encoded_text = text.encode('latin-1', 'replace').decode('latin-1')
+        else:
+            encoded_text = "" 
         for line in encoded_text.split('\n'):
             pdf.multi_cell(0, 10, line)
         pdf.output(full_path)
@@ -119,60 +126,119 @@ def analyze_documents(essay_content, transcript_content, vpd_content=""):
 
 
 # Gradio interface
-with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluation") as student_application_evaluator:
+with gr.Blocks(
+    css=css, 
+    theme = BlueTheme(),
+    title="TUM Admission Assistant"
+) as student_application_evaluator:
+    gr.Image(value="img/tum_logo.png", show_label=False, interactive=False, width=50, show_download_button=False, show_fullscreen_button=False)
+    gr.Markdown("<h1 style='color: #4889CE;'>Admission Assistant</h1>", elem_classes="section-title")
 
-    gr.Markdown("## Upload PDFs / Images", elem_classes="section-title")
+    with gr.Tab("Admission Assistant App"):
+        gr.Markdown("## Upload PDFs / Images", elem_classes="section-title")
+        with gr.Row(equal_height=True):
+            with gr.Column(elem_classes=["upload-column"]):
+                essay_file = gr.File(
+                    label="Upload Essay (PDF or Image)", 
+                    file_types=['image', '.pdf']
+                )
 
-    with gr.Row(equal_height=True):
-        with gr.Column(elem_classes=["upload-column"]):
-            essay_file = gr.File(
-                label="Upload Essay (PDF or Image)", 
-                file_types=['image', '.pdf']
+                essay_example = gr.File(visible=False)
+                gr.Examples(
+                    examples=essay_sample,
+                    inputs=[essay_example]
+                )      
+            with gr.Column(elem_classes=["upload-column"]):
+                transcript_file = gr.File(
+                    label="Upload Transcript (PDF or Image)", 
+                    file_types=['image', '.pdf']
+                )
+
+                transcript_example = gr.File(visible=False)
+                gr.Examples(
+                    examples=transcript_sample,
+                    inputs=[transcript_example],
+                )                 
+            with gr.Column(elem_classes=["upload-column"]):
+                vpd_file = gr.File(
+                    label="Upload VPD (PDF or Image), Optional", 
+                    file_types=['image', '.pdf']
+                )
+                gr.File(visible=False)
+
+        with gr.Row(equal_height=True):
+            with gr.Column(elem_classes=["upload-column"]):
+                essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
+            with gr.Column(elem_classes=["upload-column"]):
+                transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
+            with gr.Column(elem_classes=["upload-column"]):
+                vpd_content = gr.Textbox(label="Parsed VPD Content", lines=10)
+        with gr.Row():
+            summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"])
+
+        with gr.Row():
+            output = gr.Markdown(
+                visible=False,
+                max_height=600, 
+                container=True
             )
-            essay_content = gr.Textbox(label="Parsed Essay Content", lines=10)
-        with gr.Column(elem_classes=["upload-column"]):
-            transcript_file = gr.File(
-                label="Upload Transcript (PDF or Image)", 
-                file_types=['image', '.pdf']
+
+        with gr.Row():
+            applicant_result_data = gr.JSON(visible=False)
+
+        with gr.Row():
+            download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
+
+        with gr.Row():
+            caution_markdown = gr.Markdown("""
+                **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
+                **Human judgment is still essential** in all final admission decisions.
+            """, visible=False)
+
+    with gr.Tab("Evaluation History") as tab_history:
+
+        with gr.Row():
+            result_table = gr.Dataframe(
+                interactive=False,
+                row_count=0,
+                max_height=1000,
+                elem_id="table",
+                wrap=True,
+                type="pandas",
+                show_search='filter'
             )
-            transcript_content = gr.Textbox(label="Parsed Transcript Content", lines=10)
-        with gr.Column(elem_classes=["upload-column"]):
-            vpd_file = gr.File(
-                label="Upload VPD (PDF or Image), Optional", 
-                file_types=['image', '.pdf']
+
+        modal_box = gr.Group(visible=False)
+
+        with modal_box:
+            markdown_viewer = gr.Markdown(
+                visible=False, 
+                max_height=600, 
+                container=True
             )
-            vpd_content = gr.Textbox(label="Parsed VPD Content", lines=10)
+        with gr.Row():
+            close_btn = gr.Button("Close", elem_classes=["close-btn"], visible=False)
 
-    with gr.Row():
-        summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"])
+        def on_select(evt: gr.SelectData, dataframe):
+            row_idx, col_idx = evt.index
+            try:
+                selected_id = dataframe.iloc[row_idx]["ID"]
+                result = get_result(str(selected_id.item()))
+                if result:
+                    markdown = result[4] 
+                else:
+                    markdown = "Result not found."
+                return gr.update(value=markdown, visible=True), gr.update(visible=True), gr.update(visible=True)
+            except Exception as e:
+                print(e)
+                return gr.update(value=f"Error: {e}", visible=True), gr.update(visible=True), gr.update(visible=False)
 
-    with gr.Row():
-        progress_bar = gr.Slider(
-            0, 
-            100, 
-            interactive=False,
-            label="Please wait for the model to process the provided documents .....",
-            show_label=True,
-            visible=False
-        )
+        result_table.select(on_select, inputs=[result_table], outputs=[markdown_viewer, modal_box, close_btn])
+        close_btn.click(lambda: (gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)), outputs=[modal_box, markdown_viewer, close_btn])
 
-    with gr.Row():
-        output = gr.Markdown(
-            show_copy_button=True
-        )
-
-    with gr.Row():
-        download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
-
-    with gr.Row():
-        caution_markdown = gr.Markdown("""
-            **Caution**: This system uses a Large Language Model (LLM), which may occasionally produce inaccurate or misleading outputs (hallucinations).  
-            **Human judgment is still essential** in all final admission decisions.
-        """, visible=False)
+    tab_history.select(fn=get_df, outputs=result_table)
 
     
-
-    # Functions for file parsing based on extension
     def process_file(file, file_label):
         extracted_text = ""
         if file is not None:
@@ -206,34 +272,48 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(), title="TUM Application Evaluatio
         outputs=vpd_content
     )
 
+    essay_example.change(
+        fn=process_essay_and_count,
+        inputs=[essay_example, gr.State("essay")],
+        outputs=essay_content
+    )
+
+    transcript_example.change(
+        fn=process_file,
+        inputs=[transcript_example, gr.State("transcript")],
+        outputs=transcript_content
+    )
+
     def on_summarize(essay_text, transcript_text, vpd_text=""):
+        data = {}
         if not essay_text.strip() or not transcript_text.strip():
-            yield 0, "Please upload and parse both Essay and Transcript before summarizing.", gr.update(visible=False), gr.update(visible=False)
-            return
-        yield gr.update(visible=True), "", gr.update(visible=False), gr.update(visible=False)
-        yield (0) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
-        yield (1) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
+            warning_txt = "## Please upload and parse both Essay and Transcript before summarizing."
+            return gr.update(value=warning_txt, visible=True), gr.update(visible=False), gr.update(visible=False)
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
-        yield (2) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
         applicant_name = extract_applicant_name(transcript_text)
-        yield (3) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
+
+        data['applicant_name'] = applicant_name
+        data['created_at'] = timestamp
+        data['decision'] = get_decision(summary_text[len(summary_text) * 3 // 5:])
+
+        save_evaluation(data, summary_text)
         
         download_label = f"Download Evaluation"
-        #yield (4) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
-        yield gr.update(visible=False), summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
-
+        return gr.update(value=summary_text, visible=True), gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
 
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
-        outputs=[progress_bar, output, download_pdf, caution_markdown],
-        show_progress=True,
-        show_progress_on=output
+        outputs=[output, download_pdf, caution_markdown],
+        show_progress=True
     )
 
-
 if __name__ == "__main__":
-    student_application_evaluator.launch()
+    student_application_evaluator.launch(
+        favicon_path="img/tum_logo.png",
+        show_api=False,
+        share_server_protocol='https'
+    )
