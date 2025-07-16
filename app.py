@@ -291,7 +291,6 @@ with gr.Blocks(
             return gr.update(value=warning_txt, visible=True), gr.update(visible=False), gr.update(visible=False)
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
         applicant_name = extract_applicant_name(transcript_text)
-        yield (2 + 1) * 100 // 4, "", gr.update(visible=False), gr.update(visible=False)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
@@ -303,9 +302,7 @@ with gr.Blocks(
         save_evaluation(data, summary_text)
         
         download_label = f"Download Evaluation"
-        yield (3 + 1) * 100 // 4, summary_text, gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
-
-
+        return gr.update(value=summary_text, visible=True), gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
 
     summarize_button.click(
         fn=on_summarize,
