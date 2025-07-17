@@ -1,5 +1,6 @@
 import os
 import gradio as gr
+import time
 from datetime import datetime
 from config import ACTIVE_PROVIDER
 from fpdf import FPDF
@@ -185,7 +186,17 @@ with gr.Blocks(
             with gr.Column(elem_classes=["upload-column"]):
                 vpd_content = gr.Textbox(label="Parsed VPD Content", lines=10)
         with gr.Row():
-            summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"])
+            summarize_button = gr.Button("Summarize & Evaluate", elem_classes=["summarize-button"], elem_id="summarize-button")
+
+        with gr.Row():
+            progress_bar = gr.Slider(
+                minimum=0, 
+                maximum=100, 
+                value=0, 
+                label="Processing", 
+                visible=False, 
+                interactive=False,
+            )
 
         with gr.Row():
             output = gr.Markdown(
@@ -198,7 +209,12 @@ with gr.Blocks(
             applicant_result_data = gr.JSON(visible=False)
 
         with gr.Row():
-            download_pdf = gr.File(label="Download Evaluation PDF", interactive=False, visible=False)
+            download_pdf = gr.File(
+                label="Download Evaluation PDF", 
+                interactive=False, 
+                visible=False,
+                elem_classes=["download-evaluation-container"]
+            )
 
         with gr.Row():
             caution_markdown = gr.Markdown("""
@@ -296,15 +312,61 @@ with gr.Blocks(
     )
 
     def on_summarize(essay_text, transcript_text, vpd_text=""):
+        # Step 1: Start - hide button, show progress bar
+        yield (
+            gr.update(visible=False),  # output_summary
+            gr.update(visible=True, value=10),  # progress_bar
+            gr.update(visible=False),  # hide summarize_button
+            gr.update(visible=False), #download_pdf
+            gr.update(visible=False)
+        )
+
+        # Step 2: Input validation
+
         data = {}
         if not essay_text.strip() or not transcript_text.strip():
             warning_txt = "## Please upload and parse both Essay and Transcript before summarizing."
-            return gr.update(value=warning_txt, visible=True), gr.update(visible=False), gr.update(visible=False)
+            yield (
+                gr.update(value=warning_txt, visible=True),
+                gr.update(visible=False),
+                gr.update(visible=True),
+                gr.update(visible=False), #download_pdf
+                gr.update(visible=False)
+            )
+            return
+
+        # Step 3: LLM document analysis
         summary_text = analyze_documents(essay_text, transcript_text, vpd_text)
+        yield (
+            gr.update(visible=False),
+            gr.update(value=60), 
+            gr.update(visible=False), 
+            gr.update(visible=False), #download_pdf
+            gr.update(visible=False)
+        )
+
+        # Step 4: Extract name
         applicant_name = extract_applicant_name(transcript_text)
+        yield (
+            gr.update(visible=False),
+            gr.update(value=75), 
+            gr.update(visible=False), 
+            gr.update(visible=False), #download_pdf
+            gr.update(visible=False)
+        )
+
+        # Step 5: Generate PDF
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
         filename = f"{applicant_name}_Evaluation_{timestamp}.pdf"
         pdf_path = generate_pdf(summary_text, filename)
+
+        yield (
+            gr.update(visible=False),
+            gr.update(value=90), 
+            gr.update(visible=False), 
+            gr.update(visible=False), #download_pdf
+            gr.update(visible=False)
+        )
 
         data['applicant_name'] = applicant_name
         data['created_at'] = timestamp
@@ -313,13 +375,21 @@ with gr.Blocks(
         save_evaluation(data, summary_text)
         
         download_label = f"Download Evaluation"
-        return gr.update(value=summary_text, visible=True), gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), gr.update(visible=True)
+        yield (
+            gr.update(value=summary_text, visible=True),
+            gr.update(visible=False), 
+            gr.update(visible=False), 
+            gr.update(value=pdf_path, visible=True, interactive=True, label=download_label), #download_pdf
+            gr.update(visible=True)
+        )
 
     summarize_button.click(
         fn=on_summarize,
         inputs=[essay_content, transcript_content, vpd_content],
-        outputs=[output, download_pdf, caution_markdown],
-        show_progress=True
+        outputs=[output, progress_bar, summarize_button, download_pdf, caution_markdown],
+        concurrency_limit=1,
+        queue=True,
+        show_progress=False
     )
 
 if __name__ == "__main__":

@@ -58,6 +58,11 @@
     border-bottom: none;
 }
 
+.download-evaluation-container {
+    color: white !important; 
+    font-weight: bold;
+}
+
 #essay-file-upload,
 #transcript-file-upload,
 #vpd-file-upload {
