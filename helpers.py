@@ -65,7 +65,7 @@ def get_decision(evaluation_summary):
     """
     decision = generate_response(
         final_prompt, 
-        system_prompt="You judge an evaluation summary by providing answer of ACCEPTED or REJECTED"
+        system_prompt="You must reply strictly with either ACCEPTED or REJECTED, and nothing else."
     )
 
     if len(decision) >= 9:
