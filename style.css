@@ -15,17 +15,51 @@
 }
 
 .summarize-button {
-    background-color: #5e60ce;
+    background-color: #0065BD;
     color: white;
     border-radius: 5px;
     border: none;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.summarize-button:active {
-    background-color: #374151;
+.summarize-button:hover {
+    background-color: #64A0C8;
     transform: scale(0.98);
 }
 
+.summarize-button:active {
+    background-color: #64A0C8;
+    transform: scale(0.98);
+}
+
+.close-btn {
+    background-color: #e43636;
+    color: white;
+}
+
+.close-btn:hover {
+    background-color: #ee5555;
+    transform: scale(0.98);
+}
+
+#essay-file-upload > label,
+#transcript-file-upload > label,
+#vpd-file-upload > label {
+    background-color: #366fa4 !important;  
+    color: white;        
+    font-weight: bold;
+    padding: 8px 12px !important;
+    border: 1px solid #9cc0e6;
+    border-bottom: none;
+}
+
+#essay-file-upload,
+#transcript-file-upload,
+#vpd-file-upload {
+    border-color: #9cc0e6 !important;
+}
