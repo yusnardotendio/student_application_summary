@@ -315,7 +315,7 @@ with gr.Blocks(
         # Step 1: Start - hide button, show progress bar
         yield (
             gr.update(visible=False),  # output_summary
-            gr.update(visible=True, value=0),  # progress_bar
+            gr.update(visible=True, value=10),  # progress_bar
             gr.update(visible=False),  # hide summarize_button
             gr.update(visible=False), #download_pdf
             gr.update(visible=False)

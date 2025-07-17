@@ -63,11 +63,15 @@ def get_decision(evaluation_summary):
     {instruction_prompt}
     {evaluation_summary}
     """
-
-    return generate_response(
+    decision = generate_response(
         final_prompt, 
         system_prompt="You judge an evaluation summary by providing answer of ACCEPTED or REJECTED"
     )
+
+    if len(decision) >= 9:
+        return 'REJECTED'
+
+    return decision
 
 def save_evaluation(data, markdown):
     db.add_result(data['applicant_name'], markdown, data['created_at'], data['decision'])
